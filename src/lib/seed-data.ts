@@ -3,6 +3,8 @@ export type SeedPerson = {
   description: string;
   photoUrl?: string | null;
   profileUrl?: string | null;
+  title?: string;
+  facts?: string[];
 };
 
 export type SeedSet = {

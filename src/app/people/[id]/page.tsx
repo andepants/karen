@@ -45,7 +45,11 @@ export default async function PersonPage({
       )}
       <h1 className="mt-6 font-heading text-4xl">{person.name}</h1>
       <div className="mt-5">
-        <PersonFacts description={person.description || ""} />
+        <PersonFacts
+          description={person.description || ""}
+          facts={person.facts}
+          title={person.title}
+        />
       </div>
       <div className="mt-8 flex gap-3">
         <Button asChild>

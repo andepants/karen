@@ -4,6 +4,7 @@ import { cards, people, reviewLogs, sets } from "@/db/schema";
 import { State, cardInsertValues } from "./fsrs";
 import { normalizeName } from "./names";
 import { RETIRED_SET_SLUGS, seedSets, type SeedSet } from "./seed-data";
+import { factsFor } from "./seed-facts";
 
 async function deletePeople(personIds: string[]) {
   if (!personIds.length) return;
@@ -115,6 +116,10 @@ async function ensurePersonCards(
       .where(eq(people.normalizedName, normalizedName))
       .limit(1);
 
+    const extra = factsFor(person.name);
+    const title = extra?.title ?? person.title ?? existing?.title ?? null;
+    const facts = extra?.facts ?? person.facts ?? existing?.facts ?? null;
+
     let personId = existing?.id;
     if (!existing) {
       const [row] = await db
@@ -124,6 +129,8 @@ async function ensurePersonCards(
           name: person.name,
           normalizedName,
           description: person.description,
+          title,
+          facts,
           photoUrl: person.photoUrl ?? null,
           profileUrl: person.profileUrl ?? null,
         })
@@ -136,9 +143,20 @@ async function ensurePersonCards(
           setId,
           name: person.name,
           description: person.description,
+          title,
+          facts,
           photoUrl: person.photoUrl ?? existing.photoUrl,
           profileUrl: person.profileUrl ?? existing.profileUrl,
           archived: false,
+          updatedAt: now,
+        })
+        .where(eq(people.id, existing.id));
+    } else if (facts?.length || title) {
+      await db
+        .update(people)
+        .set({
+          title,
+          facts,
           updatedAt: now,
         })
         .where(eq(people.id, existing.id));

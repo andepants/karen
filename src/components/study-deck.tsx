@@ -56,13 +56,9 @@ export function StudyDeck({
   const [leechNote, setLeechNote] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const startedAt = useRef(Date.now());
-  const flippedRef = useRef(false);
   const itemRef = useRef(item);
-  const pendingRef = useRef(pending);
 
-  flippedRef.current = flipped;
   itemRef.current = item;
-  pendingRef.current = pending;
 
   useEffect(() => {
     startedAt.current = Date.now();
@@ -97,48 +93,6 @@ export function StudyDeck({
     );
   }
 
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) {
-        return;
-      }
-      if (pendingRef.current) return;
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
-        event.preventDefault();
-        run(() => undoLastReview(initial.set?.id));
-        return;
-      }
-
-      if (!itemRef.current) return;
-
-      if (event.key === " " || event.key === "Enter") {
-        event.preventDefault();
-        if (!flippedRef.current) setFlipped(true);
-        else grade(Rating.Good);
-        return;
-      }
-
-      if (!flippedRef.current) {
-        if (event.key === "1") setFlipped(true);
-        return;
-      }
-
-      if (event.key === "1") grade(Rating.Again);
-      if (event.key === "2") grade(Rating.Hard);
-      if (event.key === "3") grade(Rating.Good);
-      if (event.key === "4") grade(Rating.Easy);
-      if (event.key === "-") run(() => buryCard(itemRef.current!.card.id, "card"));
-      if (event.key === "=") run(() => buryCard(itemRef.current!.card.id, "note"));
-      if (event.key === "@") run(() => suspendCard(itemRef.current!.card.id, "card"));
-      if (event.key === "!") run(() => suspendCard(itemRef.current!.card.id, "note"));
-    }
-
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [initial.set?.id]);
-
   if (!item) {
     return (
       <div className="mx-auto max-w-lg rounded-3xl bg-card/80 px-8 py-16 text-center shadow-sm">
@@ -157,7 +111,7 @@ export function StudyDeck({
             </Button>
           ) : null}
           <Button variant="outline" asChild>
-            <Link href="/settings">Progress</Link>
+            <Link href="/settings">Options</Link>
           </Button>
         </div>
       </div>
@@ -183,7 +137,7 @@ export function StudyDeck({
           </span>
         </div>
         <div className="flex items-center gap-3 text-muted-foreground">
-          <span>{left} due</span>
+          <span>{left} people due</span>
           <span className="tabular-nums">{elapsed}s</span>
         </div>
       </div>
@@ -211,7 +165,7 @@ export function StudyDeck({
             </Button>
           ) : null}
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/settings">Progress</Link>
+            <Link href="/settings">Options</Link>
           </Button>
         </div>
       </div>
@@ -257,6 +211,8 @@ export function StudyDeck({
                 <NameAndBio
                   name={item.person.name}
                   description={item.person.description || ""}
+                  facts={item.person.facts}
+                  title={item.person.title}
                 />
               )}
             </article>
@@ -314,23 +270,12 @@ export function StudyDeck({
           variant="outline"
           size="sm"
           disabled={pending}
-          onClick={() => run(() => buryCard(item.card.id, "note"))}
-        >
-          Skip Both
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={() => run(() => suspendCard(item.card.id, "card"))}
+          onClick={() => run(() => suspendCard(item.card.id, "note"))}
         >
           Turn Off
         </Button>
       </div>
 
-      <p className="max-w-md text-center text-xs text-muted-foreground">
-        Space to flip. 1–4 to rate.
-      </p>
       {leechNote ? (
         <p className="text-sm text-muted-foreground">
           This card is taking longer to learn.
@@ -386,15 +331,24 @@ function NameFront({ name }: { name: string }) {
 function NameAndBio({
   name,
   description,
+  facts,
+  title,
 }: {
   name: string;
   description: string;
+  facts?: string[] | null;
+  title?: string | null;
 }) {
   return (
     <div className="flex h-full flex-col bg-card px-6 py-5">
       <h1 className="shrink-0 font-heading text-3xl leading-tight">{name}</h1>
       <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-        <PersonFacts description={description} compact />
+        <PersonFacts
+          description={description}
+          facts={facts}
+          title={title}
+          compact
+        />
       </div>
     </div>
   );

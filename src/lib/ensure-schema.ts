@@ -36,6 +36,8 @@ export async function ensureSchema() {
       name text not null,
       normalized_name text not null,
       description text not null default '',
+      title text,
+      facts jsonb,
       photo_url text,
       profile_url text,
       archived boolean not null default false,
@@ -87,6 +89,8 @@ export async function ensureSchema() {
 
   await db.execute(sql`alter table sources add column if not exists set_id uuid references sets(id) on delete set null`);
   await db.execute(sql`alter table people add column if not exists set_id uuid references sets(id) on delete set null`);
+  await db.execute(sql`alter table people add column if not exists title text`);
+  await db.execute(sql`alter table people add column if not exists facts jsonb`);
   await db.execute(sql`alter table cards add column if not exists kind text not null default 'face'`);
   await db.execute(sql`alter table cards add column if not exists buried_until timestamptz`);
   await db.execute(sql`alter table cards add column if not exists suspended boolean not null default false`);

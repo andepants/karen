@@ -7,12 +7,18 @@ const PREVIEW = 3;
 
 export function PersonFacts({
   description,
+  facts: storedFacts,
+  title: storedTitle,
   compact = false,
 }: {
   description: string;
+  facts?: string[] | null;
+  title?: string | null;
   compact?: boolean;
 }) {
-  const { title, facts } = parseProfile(description);
+  const parsed = parseProfile(description);
+  const facts = storedFacts?.length ? storedFacts : parsed.facts;
+  const title = storedTitle || parsed.title;
   const [open, setOpen] = useState(false);
   const visible = open ? facts : facts.slice(0, PREVIEW);
   const extra = facts.length - PREVIEW;

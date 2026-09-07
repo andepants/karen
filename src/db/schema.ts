@@ -47,6 +47,8 @@ export const people = pgTable(
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     description: text("description").notNull().default(""),
+    title: text("title"),
+    facts: jsonb("facts").$type<string[] | null>(),
     photoUrl: text("photo_url"),
     profileUrl: text("profile_url"),
     archived: boolean("archived").notNull().default(false),

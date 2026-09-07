@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { Menu, X } from "lucide-react";
 import { lockEditor } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
@@ -11,6 +15,26 @@ export function SiteHeader({
   isEditor: boolean;
   dueCount: number;
 }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    function onClick(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClick);
+    };
+  }, []);
+
   return (
     <header className="relative z-20 flex items-center justify-between gap-4 px-6 py-5">
       <Link href="/" className="flex items-center gap-2">
@@ -19,31 +43,58 @@ export function SiteHeader({
           Karen&apos;s Flashcards
         </span>
       </Link>
-      <nav className="flex items-center gap-1 sm:gap-2">
-        <Button variant="ghost" asChild>
-          <Link href="/people">Roster</Link>
+      <div ref={menuRef} className="relative">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-expanded={open}
+          aria-label={open ? "Close menu" : "Open menu"}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? <X className="size-5" /> : <Menu className="size-5" />}
         </Button>
-        <Button variant="ghost" asChild>
-          <Link href="/settings">Progress</Link>
-        </Button>
-        <Button variant="ghost" asChild>
-          <Link href={`/study/${DEFAULT_SET_SLUG}`} className="gap-1.5">
-            Study
-            {dueCount > 0 ? (
-              <span className="rounded-full bg-primary/15 px-1.5 text-xs text-primary">
-                {dueCount}
-              </span>
+        {open ? (
+          <nav className="absolute right-0 top-12 z-40 flex w-56 flex-col rounded-2xl bg-card p-2 shadow-lg ring-1 ring-border">
+            <Link
+              href={`/study/${DEFAULT_SET_SLUG}`}
+              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
+              onClick={() => setOpen(false)}
+            >
+              Study
+              {dueCount > 0 ? (
+                <span className="rounded-full bg-primary/15 px-1.5 text-xs text-primary">
+                  {dueCount}
+                </span>
+              ) : null}
+            </Link>
+            <Link
+              href="/people"
+              className="rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
+              onClick={() => setOpen(false)}
+            >
+              Roster
+            </Link>
+            <Link
+              href="/settings"
+              className="rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
+              onClick={() => setOpen(false)}
+            >
+              Options
+            </Link>
+            {isEditor ? (
+              <form action={lockEditor}>
+                <button
+                  type="submit"
+                  className="w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-secondary"
+                >
+                  Sign out
+                </button>
+              </form>
             ) : null}
-          </Link>
-        </Button>
-        {isEditor ? (
-          <form action={lockEditor}>
-            <Button variant="outline" type="submit" size="sm">
-              Sign Out
-            </Button>
-          </form>
+          </nav>
         ) : null}
-      </nav>
+      </div>
     </header>
   );
 }

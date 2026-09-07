@@ -165,7 +165,15 @@ export async function dueQueue(options: { setId?: string; now?: Date } = {}) {
   return [...learning, ...interday, ...reviews, ...newCards];
 }
 
+function uniquePeopleCount(queue: { person: { id: string } }[]) {
+  return new Set(queue.map((item) => item.person.id)).size;
+}
+
 export async function dueCount(options: { setId?: string; now?: Date } = {}) {
+  return uniquePeopleCount(await dueQueue(options));
+}
+
+export async function dueCardCount(options: { setId?: string; now?: Date } = {}) {
   return (await dueQueue(options)).length;
 }
 
@@ -272,7 +280,7 @@ export async function studySnapshot(options: {
   }
   return {
     item,
-    remaining: queue.length,
+    remaining: uniquePeopleCount(queue),
     counts,
     intervals: item ? previewIntervals(item.card, now) : null,
     canUndo: await canUndoLast(options.setId),
@@ -292,6 +300,16 @@ export async function studyStats(setId: string, now = new Date()) {
     .innerJoin(people, eq(people.id, cards.personId))
     .where(and(eq(people.setId, setId), eq(people.archived, false)));
 
+  const turnedOff = new Map<string, { id: string; name: string }>();
+  for (const row of roster) {
+    if (row.card.suspended) {
+      turnedOff.set(row.person.id, {
+        id: row.person.id,
+        name: row.person.name,
+      });
+    }
+  }
+
   return {
     prefs,
     usage,
@@ -300,6 +318,7 @@ export async function studyStats(setId: string, now = new Date()) {
     people: new Set(roster.map((row) => row.person.id)).size,
     cards: roster.length,
     roster,
+    turnedOff: [...turnedOff.values()].sort((a, b) => a.name.localeCompare(b.name)),
   };
 }
 

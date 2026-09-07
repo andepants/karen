@@ -6,7 +6,6 @@ export function ProgressDashboard({
   progress,
   remaining,
   people,
-  cards,
   bonus,
   gradeCounts,
 }: {
@@ -29,6 +28,12 @@ export function ProgressDashboard({
 
   return (
     <div className="space-y-10">
+      <div>
+        <h2 className="font-heading text-3xl">Progress</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cards you finished each day, counted by person in the roster.
+        </p>
+      </div>
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Today" value={progress.today.count} hint="cards" />
         <Stat
@@ -120,7 +125,11 @@ export function ProgressDashboard({
         <Fact
           label="Due now"
           value={String(remaining)}
-          detail={bonus ? `${bonus} extra in this session` : `${cards} cards in the deck`}
+          detail={
+            bonus
+              ? `${bonus} extra cards in this session`
+              : `${people} people · photo and name cards for each`
+          }
         />
         <Fact
           label="People met"

@@ -278,6 +278,27 @@ export async function studyMore(setId: string, extra = 20) {
   return { ok: true as const, ...(await studySnapshot({ setId })) };
 }
 
+export async function unsuspendPerson(personId: string) {
+  await ensureSchema();
+  const db = getDb();
+  await db
+    .update(cards)
+    .set({ suspended: false, buriedUntil: null })
+    .where(eq(cards.personId, personId));
+
+  const [person] = await db
+    .select({ setId: people.setId })
+    .from(people)
+    .where(eq(people.id, personId))
+    .limit(1);
+
+  refreshStudy();
+  return {
+    ok: true as const,
+    ...(await studySnapshot({ setId: person?.setId ?? undefined })),
+  };
+}
+
 export async function unburySet(setId: string) {
   const db = getDb();
   const setCards = await db

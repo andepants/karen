@@ -1,8 +1,6 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { LilyMark } from "@/components/lily-garden";
+import { Button } from "@/components/ui/button";
 
 export function HomeIntro({
   href,
@@ -11,26 +9,6 @@ export function HomeIntro({
   href: string;
   photos: string[];
 }) {
-  const router = useRouter();
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if (window.sessionStorage.getItem("karen-intro") === "1") {
-      router.replace(href);
-      return;
-    }
-    setReady(true);
-    const timer = window.setTimeout(() => {
-      window.sessionStorage.setItem("karen-intro", "1");
-      router.replace(href);
-    }, 2400);
-    return () => window.clearTimeout(timer);
-  }, [href, router]);
-
-  if (!ready) {
-    return <div className="min-h-[70vh]" />;
-  }
-
   return (
     <main className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden px-6">
       <div className="intro-lily">
@@ -50,6 +28,9 @@ export function HomeIntro({
       </div>
       <p className="mt-8 font-heading text-4xl">Karen&apos;s Flashcards</p>
       <p className="mt-2 text-muted-foreground">Learn every face.</p>
+      <Button asChild size="lg" className="mt-8 rounded-full px-8">
+        <Link href={href}>Start studying</Link>
+      </Button>
     </main>
   );
 }
