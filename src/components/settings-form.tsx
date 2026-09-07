@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { resetStudyBonus, saveStudySettings } from "@/actions/settings";
+import { resetStudyBonus, resetStudyProgress, saveStudySettings } from "@/actions/settings";
 import { studyMore } from "@/actions/study";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -128,6 +128,25 @@ export function SettingsForm({
           }
         >
           Reset extra
+        </Button>
+        <Button
+          variant="outline"
+          disabled={pending}
+          onClick={() => {
+            if (
+              !window.confirm(
+                "Clear today’s test reviews and start the deck from scratch?",
+              )
+            ) {
+              return;
+            }
+            startTransition(async () => {
+              await resetStudyProgress();
+              router.refresh();
+            });
+          }}
+        >
+          Start over
         </Button>
       </div>
     </section>

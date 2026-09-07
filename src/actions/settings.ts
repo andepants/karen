@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { isValidTimeZone } from "@/lib/dates";
+import { ensureSchema } from "@/lib/ensure-schema";
+import { resetAllStudyProgress } from "@/lib/reset-progress";
 import { roundSize } from "@/lib/session-limits";
 import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
 import { clearSessionSample } from "@/lib/session-sample";
@@ -28,6 +30,15 @@ export async function saveStudySettings(formData: FormData) {
 export async function resetStudyBonus() {
   const prefs = await getStudyPrefs();
   await writeStudyPrefs({ ...prefs, bonus: 0 });
+  refreshSettings();
+}
+
+export async function resetStudyProgress() {
+  await ensureSchema();
+  await resetAllStudyProgress();
+  const prefs = await getStudyPrefs();
+  await writeStudyPrefs({ ...prefs, bonus: 0 });
+  await clearSessionSample();
   refreshSettings();
 }
 
