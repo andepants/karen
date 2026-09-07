@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   createPerson,
@@ -103,13 +104,7 @@ function PersonCard({
                 <PersonForm person={person} sets={sets} />
               </DialogContent>
             </Dialog>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setPersonArchived(person.id, !person.archived)}
-            >
-              {person.archived ? "Restore" : "Hide"}
-            </Button>
+            <HideButton person={person} />
           </div>
         ) : null}
       </CardContent>
@@ -117,7 +112,24 @@ function PersonCard({
   );
 }
 
+function HideButton({ person }: { person: Person }) {
+  const router = useRouter();
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={async () => {
+        await setPersonArchived(person.id, !person.archived);
+        router.refresh();
+      }}
+    >
+      {person.archived ? "Restore" : "Hide"}
+    </Button>
+  );
+}
+
 function PersonForm({ person, sets }: { person?: Person; sets: SetRow[] }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const action = person ? updatePerson : createPerson;
 
@@ -126,13 +138,17 @@ function PersonForm({ person, sets }: { person?: Person; sets: SetRow[] }) {
       className="space-y-3"
       action={async (formData) => {
         const result = await action(formData);
-        if (result && "error" in result) setError(result.error ?? null);
+        if (result && "error" in result) {
+          setError(result.error ?? null);
+          return;
+        }
+        router.refresh();
       }}
     >
       {person ? <input type="hidden" name="id" value={person.id} /> : null}
       {sets.length ? (
         <div className="space-y-1">
-          <Label htmlFor={`set-${person?.id ?? "new"}`}>Set</Label>
+          <Label htmlFor={`set-${person?.id ?? "new"}`}>Deck</Label>
           <select
             id={`set-${person?.id ?? "new"}`}
             name="setId"

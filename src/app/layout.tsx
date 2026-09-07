@@ -18,8 +18,8 @@ const sans = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "Karen",
-  description: "A simple flashcards app for names and faces.",
+  title: "Flashcards",
+  description: "Learn names and faces.",
 };
 
 export const dynamic = "force-dynamic";

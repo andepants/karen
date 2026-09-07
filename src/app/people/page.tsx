@@ -3,6 +3,7 @@ import { PeopleGrid } from "@/components/people-grid";
 import { getDb } from "@/db";
 import { people, sets } from "@/db/schema";
 import { isEditor } from "@/lib/auth";
+import { ensureTestSets } from "@/lib/ensure-test-set";
 import { getSetBySlug } from "@/lib/sets";
 
 export default async function PeoplePage({
@@ -17,6 +18,7 @@ export default async function PeoplePage({
   let roster: (typeof people.$inferSelect)[] = [];
   let allSets: (typeof sets.$inferSelect)[] = [];
   try {
+    await ensureTestSets();
     const db = getDb();
     allSets = await db.select().from(sets).orderBy(asc(sets.name));
     const rows = editor

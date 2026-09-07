@@ -51,7 +51,7 @@ export function ImportForm({ isEditor }: { isEditor: boolean }) {
       setPeople(next);
       setSelected(Object.fromEntries(next.map((_, i) => [i, true])));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Import failed");
+      setError(err instanceof Error ? err.message : "Couldn't import.");
     } finally {
       setLoading(false);
     }

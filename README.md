@@ -1,6 +1,6 @@
-# Karen
+# Flashcards
 
-A simple flashcards app for names and faces.
+A simple app for names and faces.
 
 ## Decks
 

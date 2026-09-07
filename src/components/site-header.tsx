@@ -15,7 +15,7 @@ export function SiteHeader({
       <Link href="/" className="flex items-center gap-2">
         <LilyMark className="h-10 w-8" />
         <span className="font-heading text-xl tracking-wide text-foreground">
-          Karen
+          Flashcards
         </span>
       </Link>
       <nav className="flex items-center gap-1 sm:gap-2">
