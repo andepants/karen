@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   buryCard,
@@ -10,16 +9,18 @@ import {
   undoLastReview,
 } from "@/actions/study";
 import { PersonFacts } from "@/components/person-facts";
+import { PromptToggle, type PromptSide } from "@/components/prompt-toggle";
 import {
   SessionRecap,
   addSessionRating,
   emptySessionScore,
 } from "@/components/session-recap";
-import { Rating, stateLabel } from "@/lib/fsrs";
-import { gradeTone, memoryGrade } from "@/lib/grades";
+import { Rating } from "@/lib/fsrs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { DEFAULT_SESSION } from "@/lib/session-limits";
 import type { StudySnapshot } from "@/lib/queue";
+
+const PROMPT_KEY = "karen-prompt";
 
 const ratings = [
   { value: Rating.Again, label: "Again", hint: "Forgot" },
@@ -43,12 +44,19 @@ function applySnapshot(
   setCanUndo(snapshot.canUndo);
 }
 
+function readPrompt(): PromptSide {
+  if (typeof window === "undefined") return "picture";
+  return window.sessionStorage.getItem(PROMPT_KEY) === "name" ? "name" : "picture";
+}
+
 export function StudyDeck({
   initial,
-  setSlug,
+  sessionGoal = DEFAULT_SESSION,
+  sessionSize = DEFAULT_SESSION,
 }: {
   initial: StudySnapshot;
-  setSlug?: string;
+  sessionGoal?: number;
+  sessionSize?: number;
 }) {
   const [item, setItem] = useState(initial.item);
   const [left, setLeft] = useState(initial.remaining);
@@ -62,16 +70,29 @@ export function StudyDeck({
   const [leechNote, setLeechNote] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [session, setSession] = useState(emptySessionScore);
+  const [goal, setGoal] = useState(sessionGoal);
+  const [prompt, setPrompt] = useState<PromptSide>("picture");
+  const [cardPrompt, setCardPrompt] = useState<PromptSide>("picture");
   const startedAt = useRef(Date.now());
   const itemRef = useRef(item);
+  const promptRef = useRef<PromptSide>("picture");
 
   itemRef.current = item;
+  promptRef.current = prompt;
+
+  useEffect(() => {
+    const stored = readPrompt();
+    setPrompt(stored);
+    setCardPrompt(stored);
+    promptRef.current = stored;
+  }, []);
 
   useEffect(() => {
     startedAt.current = Date.now();
     setElapsed(0);
     setFlipped(false);
     setRevealed(false);
+    setCardPrompt(promptRef.current);
     const timer = window.setInterval(() => {
       setElapsed(Math.floor((Date.now() - startedAt.current) / 1000));
     }, 250);
@@ -118,15 +139,16 @@ export function StudyDeck({
         onStudyMore={() => {
           if (!initial.set?.id) return;
           setSession(emptySessionScore());
+          setGoal((current) => current + sessionSize);
           run(() => studyMore(initial.set!.id));
         }}
       />
     );
   }
 
-  const isNameCard = item.card.kind === "name";
-
-  const letter = memoryGrade(item.card);
+  const pictureFirst = cardPrompt === "picture";
+  const current = session.cards + 1;
+  const total = Math.max(goal, current);
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5 pb-28">
@@ -148,32 +170,18 @@ export function StudyDeck({
         </div>
       </div>
 
-      <div className="flex w-full flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">{stateLabel(item.card.state)}</Badge>
-          <Badge variant="secondary">
-            {isNameCard ? "Name card" : "Photo card"}
-          </Badge>
-          {item.card.leech ? <Badge variant="destructive">Hard</Badge> : null}
-          <Badge variant="outline" className={gradeTone(letter)}>
-            {letter}
-          </Badge>
-        </div>
-        <div className="flex gap-1">
-          {initial.set?.id ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={pending}
-              onClick={() => run(() => studyMore(initial.set!.id))}
-            >
-              Study more
-            </Button>
-          ) : null}
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/settings">Options</Link>
-          </Button>
-        </div>
+      <div className="flex w-full items-center justify-between gap-3">
+        <p className="font-heading text-3xl tabular-nums">
+          {current}
+          <span className="text-muted-foreground">/{total}</span>
+        </p>
+        <PromptToggle
+          value={prompt}
+          onChange={(value) => {
+            setPrompt(value);
+            window.sessionStorage.setItem(PROMPT_KEY, value);
+          }}
+        />
       </div>
 
       <div className="flashcard-scene w-full">
@@ -200,29 +208,29 @@ export function StudyDeck({
             className={`flashcard-inner ${flipped ? "is-flipped" : ""}`}
           >
             <article className="flashcard-face flashcard-front">
-              {isNameCard ? (
-                <NameFront name={item.person.name} />
-              ) : (
+              {pictureFirst ? (
                 <FacePhoto
                   name={item.person.name}
                   photoUrl={item.person.photoUrl}
                   labeled={false}
                 />
+              ) : (
+                <NameFront name={item.person.name} />
               )}
             </article>
             <article className="flashcard-face flashcard-back">
-              {isNameCard ? (
-                <FacePhoto
-                  name={item.person.name}
-                  photoUrl={item.person.photoUrl}
-                  labeled
-                />
-              ) : (
+              {pictureFirst ? (
                 <NameAndBio
                   name={item.person.name}
                   description={item.person.description || ""}
                   facts={item.person.facts}
                   title={item.person.title}
+                />
+              ) : (
+                <FacePhoto
+                  name={item.person.name}
+                  photoUrl={item.person.photoUrl}
+                  labeled
                 />
               )}
             </article>
