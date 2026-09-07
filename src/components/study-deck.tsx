@@ -186,7 +186,7 @@ export function StudyDeck({
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">{stateLabel(item.card.state)}</Badge>
           <Badge variant="secondary">
-            {isNameCard ? "Name" : "Photo"}
+            {isNameCard ? "Name card" : "Photo card"}
           </Badge>
           {item.card.leech ? <Badge variant="destructive">Hard</Badge> : null}
         </div>

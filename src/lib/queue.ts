@@ -181,9 +181,23 @@ export async function studyCounts(options: { setId?: string; now?: Date } = {}) 
       ),
     );
 
+  // Anki's learn count includes cards waiting on the next intra-day step,
+  // even when they are not due yet (Again typically schedules ~1m later).
+  const learningRows = await db
+    .select({ id: cards.id })
+    .from(cards)
+    .innerJoin(people, eq(people.id, cards.personId))
+    .where(
+      and(
+        activeCardFilter(now, options.setId),
+        or(eq(cards.state, State.Learning), eq(cards.state, State.Relearning)),
+        sql`${cards.scheduledDays} < 1`,
+      ),
+    );
+
   const counts: StudyCounts = {
     new: 0,
-    learning: 0,
+    learning: learningRows.length,
     review: 0,
     buried: Number(buried?.count ?? 0),
   };
@@ -193,7 +207,7 @@ export async function studyCounts(options: { setId?: string; now?: Date } = {}) 
       item.card.state === State.Learning ||
       item.card.state === State.Relearning
     ) {
-      counts.learning += 1;
+      continue;
     } else counts.review += 1;
   }
   return counts;
