@@ -13,6 +13,7 @@ import {
   rowToFsrs,
   scheduler,
 } from "@/lib/fsrs";
+import { ensureSchema } from "@/lib/ensure-schema";
 import { nextUtcDay, studySnapshot, type StudySnapshot } from "@/lib/queue";
 
 function refreshStudy() {
@@ -104,6 +105,7 @@ export async function rateCard(
     return { error: "Invalid rating." };
   }
 
+  await ensureSchema();
   const db = getDb();
   const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
   if (!row) {
@@ -151,6 +153,7 @@ export async function rateCard(
 }
 
 export async function undoLastReview(setId?: string) {
+  await ensureSchema();
   const db = getDb();
   const [log] = await db
     .select()
@@ -197,6 +200,7 @@ export async function undoLastReview(setId?: string) {
 }
 
 export async function buryCard(cardId: string, scope: "card" | "note" = "card") {
+  await ensureSchema();
   const db = getDb();
   const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
   if (!row) return { error: "Card not found." };
@@ -217,6 +221,7 @@ export async function buryCard(cardId: string, scope: "card" | "note" = "card") 
 }
 
 export async function suspendCard(cardId: string, scope: "card" | "note" = "card") {
+  await ensureSchema();
   const db = getDb();
   const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
   if (!row) return { error: "Card not found." };
