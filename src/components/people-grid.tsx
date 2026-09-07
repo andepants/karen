@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   createPerson,
@@ -18,60 +20,82 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { people as peopleTable } from "@/db/schema";
+import { gradeTone, type MemoryGrade } from "@/lib/grades";
+import type { people as peopleTable, sets as setsTable } from "@/db/schema";
 
 type Person = typeof peopleTable.$inferSelect;
+type SetRow = typeof setsTable.$inferSelect;
 
 export function PeopleGrid({
   people,
+  sets,
   isEditor,
+  grades,
 }: {
   people: Person[];
+  sets: SetRow[];
   isEditor: boolean;
+  grades: Record<string, MemoryGrade>;
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {isEditor ? <AddPersonCard /> : null}
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+      {isEditor ? <AddPersonCard sets={sets} /> : null}
       {people.map((person) => (
-        <PersonCard key={person.id} person={person} isEditor={isEditor} />
+        <PersonCard
+          key={person.id}
+          person={person}
+          sets={sets}
+          isEditor={isEditor}
+          grade={grades[person.id] ?? "—"}
+        />
       ))}
     </div>
   );
 }
 
-function AddPersonCard() {
+function AddPersonCard({ sets }: { sets: SetRow[] }) {
   return (
     <Card className="border-dashed bg-card/60">
-      <CardContent className="flex h-full min-h-48 flex-col justify-center p-5">
-        <p className="font-heading text-xl">Add someone</p>
-        <PersonForm />
+      <CardContent className="flex h-full min-h-36 flex-col justify-center p-4">
+        <p className="font-heading text-lg">Add</p>
+        <PersonForm sets={sets} />
       </CardContent>
     </Card>
   );
 }
 
-function PersonCard({ person, isEditor }: { person: Person; isEditor: boolean }) {
+function PersonCard({
+  person,
+  sets,
+  isEditor,
+  grade,
+}: {
+  person: Person;
+  sets: SetRow[];
+  isEditor: boolean;
+  grade: MemoryGrade;
+}) {
   return (
     <Card className={person.archived ? "opacity-60" : "bg-card/90"}>
-      <CardContent className="space-y-3 p-5">
-        {person.photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={person.photoUrl}
-            alt={person.name}
-            className="aspect-square w-full rounded-2xl object-cover"
-          />
-        ) : (
-          <div className="flex aspect-square items-center justify-center rounded-2xl bg-secondary font-heading text-4xl text-muted-foreground">
-            {person.name.slice(0, 1)}
+      <CardContent className="space-y-2 p-3">
+        <Link href={`/people/${person.id}`} className="block">
+          {person.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={person.photoUrl}
+              alt={person.name}
+              className="aspect-square w-full rounded-xl object-cover object-top"
+            />
+          ) : (
+            <div className="flex aspect-square items-center justify-center rounded-xl bg-secondary font-heading text-3xl text-muted-foreground">
+              {person.name.slice(0, 1)}
+            </div>
+          )}
+          <div className="mt-2 flex items-start justify-between gap-2">
+            <h2 className="font-heading text-lg leading-tight">{person.name}</h2>
+            <span className={`text-sm font-medium ${gradeTone(grade)}`}>{grade}</span>
           </div>
-        )}
-        <div>
-          <h2 className="font-heading text-2xl leading-tight">{person.name}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {person.description || "No description yet"}
-          </p>
-        </div>
+        </Link>
         {isEditor ? (
           <div className="flex gap-2">
             <Dialog>
@@ -84,16 +108,10 @@ function PersonCard({ person, isEditor }: { person: Person; isEditor: boolean })
                 <DialogHeader>
                   <DialogTitle>Edit {person.name}</DialogTitle>
                 </DialogHeader>
-                <PersonForm person={person} />
+                <PersonForm person={person} sets={sets} />
               </DialogContent>
             </Dialog>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setPersonArchived(person.id, !person.archived)}
-            >
-              {person.archived ? "Restore" : "Hide"}
-            </Button>
+            <HideButton person={person} />
           </div>
         ) : null}
       </CardContent>
@@ -101,7 +119,24 @@ function PersonCard({ person, isEditor }: { person: Person; isEditor: boolean })
   );
 }
 
-function PersonForm({ person }: { person?: Person }) {
+function HideButton({ person }: { person: Person }) {
+  const router = useRouter();
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={async () => {
+        await setPersonArchived(person.id, !person.archived);
+        router.refresh();
+      }}
+    >
+      {person.archived ? "Restore" : "Hide"}
+    </Button>
+  );
+}
+
+function PersonForm({ person, sets }: { person?: Person; sets: SetRow[] }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const action = person ? updatePerson : createPerson;
 
@@ -110,10 +145,31 @@ function PersonForm({ person }: { person?: Person }) {
       className="space-y-3"
       action={async (formData) => {
         const result = await action(formData);
-        if (result && "error" in result) setError(result.error ?? null);
+        if (result && "error" in result) {
+          setError(result.error ?? null);
+          return;
+        }
+        router.refresh();
       }}
     >
       {person ? <input type="hidden" name="id" value={person.id} /> : null}
+      {sets.length ? (
+        <div className="space-y-1">
+          <Label htmlFor={`set-${person?.id ?? "new"}`}>Deck</Label>
+          <select
+            id={`set-${person?.id ?? "new"}`}
+            name="setId"
+            defaultValue={person?.setId ?? sets[0]?.id}
+            className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm"
+          >
+            {sets.map((set) => (
+              <option key={set.id} value={set.id}>
+                {set.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <div className="space-y-1">
         <Label htmlFor={`name-${person?.id ?? "new"}`}>Name</Label>
         <Input
@@ -124,7 +180,7 @@ function PersonForm({ person }: { person?: Person }) {
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor={`description-${person?.id ?? "new"}`}>Description</Label>
+        <Label htmlFor={`description-${person?.id ?? "new"}`}>Notes</Label>
         <Textarea
           id={`description-${person?.id ?? "new"}`}
           name="description"

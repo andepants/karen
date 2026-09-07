@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 350" role="img" aria-label="Isaac Klein">
+  <rect width="280" height="350" fill="#f3ddd6"/>
+  <circle cx="140" cy="138" r="62" fill="#c68642"/>
+  <path d="M68 92 C72 28 208 24 214 96 C200 52 86 50 68 92Z" fill="#4a2c17"/>
+  <ellipse cx="118" cy="136" rx="7" ry="8" fill="#2b2118"/>
+  <ellipse cx="162" cy="136" rx="7" ry="8" fill="#2b2118"/>
+  <path d="M126 162 C140 172 154 172 166 162" fill="none" stroke="#8a5a44" stroke-width="3" stroke-linecap="round"/>
+  
+  <path d="M108 168 C118 198 162 198 172 168 C156 186 124 186 108 168Z" fill="#4a2c17" opacity="0.85"/>
+  <path d="M78 230 C88 196 192 196 202 230 C210 286 70 286 78 230Z" fill="#2f4f6f"/>
+  <text x="140" y="328" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#3d4a38">IK</text>
+</svg>

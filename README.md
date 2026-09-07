@@ -1,6 +1,10 @@
-# Karen
+# Karen's Flashcards
 
-Lily-themed flashcards. Paste a team page, then study faces with FSRS.
+Learn every face.
+
+Default deck: Austin Area OBGYN (40 people) at `/study/aaobgyn`.
+
+Live: https://karen-lily-andepants-projects.vercel.app
 
 ## Local
 
@@ -8,6 +12,7 @@ Lily-themed flashcards. Paste a team page, then study faces with FSRS.
 vercel link
 vercel env pull .env.local --yes
 npm run db:push
+npm run db:seed
 npm run dev
 ```
 

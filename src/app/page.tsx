@@ -1,11 +1,41 @@
+<<<<<<< HEAD
 import { LilyGarden } from "@/components/lily-garden";
 import { KayakScene } from "@/components/kayak-scene";
 import { ImportForm, UnlockForm } from "@/components/import-form";
 import { isEditor } from "@/lib/auth";
+=======
+import { HomeIntro } from "@/components/home-intro";
+import { getDb } from "@/db";
+import { people } from "@/db/schema";
+import { ensureDefaultSet } from "@/lib/ensure-test-set";
+import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
+import { and, eq, isNotNull } from "drizzle-orm";
+>>>>>>> origin/cursor/anki-sets-seed-52fa
 
 export default async function HomePage() {
-  const editor = await isEditor();
+  const deck = await ensureDefaultSet().catch(() => null);
+  const studyHref = deck ? `/study/${deck.slug}` : `/study/${DEFAULT_SET_SLUG}`;
+  let faces: { id: string; name: string; photoUrl: string }[] = [];
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: people.id,
+        name: people.name,
+        photoUrl: people.photoUrl,
+      })
+      .from(people)
+      .where(and(eq(people.archived, false), isNotNull(people.photoUrl)));
+    faces = rows
+      .filter((row): row is { id: string; name: string; photoUrl: string } =>
+        Boolean(row.photoUrl),
+      )
+      .sort(() => Math.random() - 0.5);
+  } catch {
+    faces = [];
+  }
 
+<<<<<<< HEAD
   return (
     <main className="relative overflow-hidden px-6 pb-40 pt-8 md:pt-16">
       <LilyGarden />
@@ -29,4 +59,7 @@ export default async function HomePage() {
       </div>
     </main>
   );
+=======
+  return <HomeIntro href={studyHref} faces={faces} />;
+>>>>>>> origin/cursor/anki-sets-seed-52fa
 }
