@@ -23,6 +23,7 @@ import {
 import { formatStudyTime } from "@/lib/dates";
 import { progressStats } from "@/lib/progress";
 import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
+import { clearSessionSample } from "@/lib/session-sample";
 
 function refreshStudy() {
   revalidatePath("/study");
@@ -79,14 +80,26 @@ async function burySiblings(
     );
 }
 
-export async function getStudyState(setId?: string): Promise<StudySnapshot> {
-  return studySnapshot({ setId });
+export async function getStudyState(
+  setId?: string,
+  samplePersonIds?: string[],
+): Promise<StudySnapshot> {
+  return studySnapshot({ setId, samplePersonIds, persistSample: true });
+}
+
+export async function lockStudySample(setId: string, personIds: string[]) {
+  return studySnapshot({
+    setId,
+    samplePersonIds: personIds,
+    persistSample: true,
+  });
 }
 
 export async function rateCard(
   cardId: string,
   rating: number,
   reviewTimeMs?: number,
+  samplePersonIds?: string[],
 ) {
   if (!isGrade(rating)) {
     return { error: "Invalid rating." };
@@ -143,11 +156,16 @@ export async function rateCard(
     now,
     skipCardId: cardId,
     skipPersonId: row.personId,
+    samplePersonIds,
+    persistSample: true,
   });
   return { ok: true as const, leech, ...snapshot };
 }
 
-export async function undoLastReview(setId?: string) {
+export async function undoLastReview(
+  setId?: string,
+  samplePersonIds?: string[],
+) {
   if (!setId) {
     return { error: "Nothing to undo." };
   }
@@ -195,10 +213,21 @@ export async function undoLastReview(setId?: string) {
 
   await db.delete(reviewLogs).where(eq(reviewLogs.id, log.review_logs.id));
   refreshStudy();
-  return { ok: true as const, ...(await studySnapshot({ setId })) };
+  return {
+    ok: true as const,
+    ...(await studySnapshot({
+      setId,
+      samplePersonIds,
+      persistSample: true,
+    })),
+  };
 }
 
-export async function buryCard(cardId: string, scope: "card" | "note" = "card") {
+export async function buryCard(
+  cardId: string,
+  scope: "card" | "note" = "card",
+  samplePersonIds?: string[],
+) {
   await ensureSchema();
   const db = getDb();
   const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
@@ -223,11 +252,17 @@ export async function buryCard(cardId: string, scope: "card" | "note" = "card") 
       setId,
       skipCardId: cardId,
       skipPersonId: row.personId,
+      samplePersonIds,
+      persistSample: true,
     })),
   };
 }
 
-export async function suspendCard(cardId: string, scope: "card" | "note" = "card") {
+export async function suspendCard(
+  cardId: string,
+  scope: "card" | "note" = "card",
+  samplePersonIds?: string[],
+) {
   await ensureSchema();
   const db = getDb();
   const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
@@ -253,6 +288,8 @@ export async function suspendCard(cardId: string, scope: "card" | "note" = "card
       setId,
       skipCardId: cardId,
       skipPersonId: row.personId,
+      samplePersonIds,
+      persistSample: true,
     })),
   };
 }
@@ -293,9 +330,13 @@ export async function studyMore(setId: string, extra?: number) {
     ...prefs,
     bonus: prefs.bonus + Math.max(prefs.session, extra ?? prefs.session),
   });
+  await clearSessionSample();
   await unburySet(setId);
   refreshStudy();
-  return { ok: true as const, ...(await studySnapshot({ setId })) };
+  return {
+    ok: true as const,
+    ...(await studySnapshot({ setId, persistSample: true })),
+  };
 }
 
 export async function unsuspendPerson(personId: string) {

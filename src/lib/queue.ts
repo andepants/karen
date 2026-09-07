@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { cards, people, reviewLogs, sets } from "@/db/schema";
 import {
@@ -10,6 +10,10 @@ import {
   type CardRow,
 } from "./fsrs";
 import { getStudyPrefs } from "./session-prefs";
+import {
+  getSessionSample,
+  writeSessionSample,
+} from "./session-sample";
 
 export type SetRow = typeof sets.$inferSelect;
 export type PersonRow = typeof people.$inferSelect;
@@ -33,6 +37,7 @@ export type StudySnapshot = {
   intervals: Record<1 | 2 | 3 | 4, string> | null;
   canUndo: boolean;
   set: Pick<SetRow, "id" | "slug" | "name" | "description"> | null;
+  samplePersonIds: string[];
 };
 
 export function startOfUtcDay(now = new Date()) {
@@ -100,7 +105,9 @@ async function loadLimits(setId?: string) {
   };
 }
 
-export async function dueQueue(options: { setId?: string; now?: Date } = {}) {
+export async function dueQueue(
+  options: { setId?: string; now?: Date; personIds?: string[] } = {},
+) {
   const now = options.now ?? new Date();
   const setId = options.setId;
   const db = getDb();
@@ -108,23 +115,26 @@ export async function dueQueue(options: { setId?: string; now?: Date } = {}) {
   const usage = await todayUsage(setId, now);
   const remainingNew = Math.max(0, limits.newCardsPerDay - usage.newToday);
   const remainingReviews = Math.max(0, limits.reviewsPerDay - usage.reviewsToday);
-  const active = activeCardFilter(now, setId);
+  const active = options.personIds?.length
+    ? and(activeCardFilter(now, setId), inArray(people.id, options.personIds))
+    : activeCardFilter(now, setId);
 
-  const learning = await db
-    .select({ card: cards, person: people })
-    .from(cards)
-    .innerJoin(people, eq(people.id, cards.personId))
-    .where(
-      and(
-        active,
-        lte(cards.due, now),
-        or(eq(cards.state, State.Learning), eq(cards.state, State.Relearning)),
-        sql`${cards.scheduledDays} < 1`,
+  const learning = shuffle(
+    await db
+      .select({ card: cards, person: people })
+      .from(cards)
+      .innerJoin(people, eq(people.id, cards.personId))
+      .where(
+        and(
+          active,
+          lte(cards.due, now),
+          or(eq(cards.state, State.Learning), eq(cards.state, State.Relearning)),
+          sql`${cards.scheduledDays} < 1`,
+        ),
       ),
-    )
-    .orderBy(asc(cards.due));
+  );
 
-  const interday = remainingReviews
+  const interdayRows = remainingReviews
     ? await db
         .select({ card: cards, person: people })
         .from(cards)
@@ -137,32 +147,40 @@ export async function dueQueue(options: { setId?: string; now?: Date } = {}) {
             sql`${cards.scheduledDays} >= 1`,
           ),
         )
-        .orderBy(asc(cards.due))
-        .limit(remainingReviews)
     : [];
+  const interday = shuffle(interdayRows).slice(0, remainingReviews);
 
   const reviewSlots = Math.max(0, remainingReviews - interday.length);
-  const reviews = reviewSlots
+  const reviewRows = reviewSlots
     ? await db
         .select({ card: cards, person: people })
         .from(cards)
         .innerJoin(people, eq(people.id, cards.personId))
         .where(and(active, lte(cards.due, now), eq(cards.state, State.Review)))
-        .orderBy(asc(cards.due))
-        .limit(reviewSlots)
     : [];
+  const reviews = shuffle(reviewRows).slice(0, reviewSlots);
 
-  const newCards = remainingNew
+  const newRows = remainingNew
     ? await db
         .select({ card: cards, person: people })
         .from(cards)
         .innerJoin(people, eq(people.id, cards.personId))
         .where(and(active, eq(cards.state, State.New)))
-        .orderBy(asc(people.createdAt), asc(cards.kind))
-        .limit(remainingNew)
     : [];
+  const newCards = shuffle(newRows).slice(0, remainingNew);
 
-  return [...learning, ...interday, ...reviews, ...newCards];
+  return [...learning, ...interday, ...shuffle([...reviews, ...newCards])];
+}
+
+function shuffle<T>(items: T[]) {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    const current = next[index];
+    next[index] = next[swap]!;
+    next[swap] = current!;
+  }
+  return next;
 }
 
 function uniquePeopleCount(queue: { person: { id: string } }[]) {
@@ -181,8 +199,29 @@ export async function isDueCard(
   cardId: string,
   options: { setId?: string; now?: Date } = {},
 ) {
-  const queue = await dueQueue(options);
-  return queue.some((item) => item.card.id === cardId);
+  const now = options.now ?? new Date();
+  const db = getDb();
+  const [row] = await db
+    .select({
+      card: cards,
+      archived: people.archived,
+      setId: people.setId,
+    })
+    .from(cards)
+    .innerJoin(people, eq(people.id, cards.personId))
+    .where(eq(cards.id, cardId))
+    .limit(1);
+  if (!row || row.archived || row.card.suspended) return false;
+  if (row.card.buriedUntil && row.card.buriedUntil > now) return false;
+  if (options.setId && row.setId !== options.setId) return false;
+
+  if (row.card.state === State.New) {
+    const limits = await loadLimits(options.setId);
+    const usage = await todayUsage(options.setId, now);
+    return usage.newToday < limits.newCardsPerDay;
+  }
+
+  return row.card.due <= now;
 }
 
 export async function studyCounts(options: { setId?: string; now?: Date } = {}) {
@@ -247,14 +286,63 @@ export async function canUndoLast(setId?: string) {
   return Boolean(row);
 }
 
+function uniquePersonIds(queue: { person: { id: string } }[]) {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const item of queue) {
+    if (seen.has(item.person.id)) continue;
+    seen.add(item.person.id);
+    ids.push(item.person.id);
+  }
+  return ids;
+}
+
+async function resolveSessionSample(options: {
+  setId?: string;
+  duePeople: string[];
+  requested?: string[];
+  persist?: boolean;
+}) {
+  const prefs = await getStudyPrefs();
+  const limit = prefs.session + prefs.bonus;
+  const requested = (options.requested ?? []).filter(Boolean);
+  const stored = await getSessionSample(options.setId);
+  let sample = stored?.personIds ?? (requested.length ? requested : null);
+
+  if (!sample) {
+    sample = shuffle(options.duePeople).slice(0, Math.max(1, limit));
+  } else if (sample.length < limit) {
+    const extra = shuffle(
+      options.duePeople.filter((id) => !sample!.includes(id)),
+    ).slice(0, limit - sample.length);
+    sample = [...sample, ...extra];
+  }
+
+  if (options.persist && options.setId) {
+    await writeSessionSample(options.setId, sample);
+  }
+  return sample;
+}
+
 export async function studySnapshot(options: {
   setId?: string;
   now?: Date;
   skipCardId?: string;
   skipPersonId?: string;
+  samplePersonIds?: string[];
+  persistSample?: boolean;
 } = {}): Promise<StudySnapshot> {
   const now = options.now ?? new Date();
-  const queue = await dueQueue({ setId: options.setId, now });
+  const openQueue = await dueQueue({ setId: options.setId, now });
+  const samplePersonIds = await resolveSessionSample({
+    setId: options.setId,
+    duePeople: uniquePersonIds(openQueue),
+    requested: options.samplePersonIds,
+    persist: options.persistSample,
+  });
+  const queue = samplePersonIds.length
+    ? await dueQueue({ setId: options.setId, now, personIds: samplePersonIds })
+    : openQueue;
   const item =
     queue.find((entry) => {
       if (options.skipCardId && entry.card.id === options.skipCardId) return false;
@@ -286,6 +374,7 @@ export async function studySnapshot(options: {
     intervals: item ? previewIntervals(item.card, now) : null,
     canUndo: await canUndoLast(options.setId),
     set,
+    samplePersonIds,
   };
 }
 

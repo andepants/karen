@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   buryCard,
+  lockStudySample,
   rateCard,
   studyMore,
   suspendCard,
@@ -76,6 +77,7 @@ export function StudyDeck({
   const startedAt = useRef(Date.now());
   const itemRef = useRef(item);
   const promptRef = useRef<PromptSide>("picture");
+  const sampleRef = useRef(initial.samplePersonIds);
 
   itemRef.current = item;
   promptRef.current = prompt;
@@ -86,6 +88,13 @@ export function StudyDeck({
     setCardPrompt(stored);
     promptRef.current = stored;
   }, []);
+
+  useEffect(() => {
+    const setId = initial.set?.id;
+    const personIds = sampleRef.current;
+    if (!setId || !personIds.length) return;
+    void lockStudySample(setId, personIds);
+  }, [initial.set?.id]);
 
   useEffect(() => {
     startedAt.current = Date.now();
@@ -116,6 +125,9 @@ export function StudyDeck({
       if (scored) {
         setSession((current) => addSessionRating(current, scored.rating, scored.timeMs));
       }
+      if (result.samplePersonIds?.length) {
+        sampleRef.current = result.samplePersonIds;
+      }
       setFlipped(false);
       setRevealed(false);
       applySnapshot(result, setItem, setLeft, setCounts, setIntervals, setCanUndo);
@@ -126,7 +138,10 @@ export function StudyDeck({
     if (!itemRef.current) return;
     const current = itemRef.current;
     const timeMs = Date.now() - startedAt.current;
-    run(() => rateCard(current.card.id, rating, timeMs), { rating, timeMs });
+    run(() => rateCard(current.card.id, rating, timeMs, sampleRef.current), {
+      rating,
+      timeMs,
+    });
   }
 
   if (!item) {
@@ -140,6 +155,7 @@ export function StudyDeck({
           if (!initial.set?.id) return;
           setSession(emptySessionScore());
           setGoal((current) => current + sessionSize);
+          sampleRef.current = [];
           run(() => studyMore(initial.set!.id));
         }}
       />
@@ -275,7 +291,7 @@ export function StudyDeck({
           variant="outline"
           size="sm"
           disabled={pending || !canUndo}
-          onClick={() => run(() => undoLastReview(initial.set?.id))}
+          onClick={() => run(() => undoLastReview(initial.set?.id, sampleRef.current))}
         >
           Undo
         </Button>
@@ -283,7 +299,7 @@ export function StudyDeck({
           variant="outline"
           size="sm"
           disabled={pending}
-          onClick={() => run(() => buryCard(item.card.id, "card"))}
+          onClick={() => run(() => buryCard(item.card.id, "card", sampleRef.current))}
         >
           Skip
         </Button>
@@ -291,7 +307,7 @@ export function StudyDeck({
           variant="outline"
           size="sm"
           disabled={pending}
-          onClick={() => run(() => suspendCard(item.card.id, "note"))}
+          onClick={() => run(() => suspendCard(item.card.id, "note", sampleRef.current))}
         >
           Turn Off
         </Button>
