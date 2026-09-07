@@ -97,7 +97,7 @@ export function SettingsForm({
           <span>
             <span className="block text-sm font-medium">One card per person</span>
             <span className="mt-0.5 block text-sm text-muted-foreground">
-              Hide the matching photo or name card until tomorrow.
+              After you rate someone, their other card waits until tomorrow.
             </span>
           </span>
         </label>

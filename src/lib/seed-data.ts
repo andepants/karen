@@ -28,8 +28,8 @@ export const seedSets: SeedSet[] = [
     name: "Austin Area OBGYN",
     description: "The Austin Area OBGYN team.",
     newCardsPerDay: 10,
-    buryNewSiblings: false,
-    buryReviewSiblings: false,
+    buryNewSiblings: true,
+    buryReviewSiblings: true,
     people: [
       {
         name: "Mark Akin, MD, FACOG",

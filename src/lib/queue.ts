@@ -251,17 +251,18 @@ export async function studySnapshot(options: {
   setId?: string;
   now?: Date;
   skipCardId?: string;
+  skipPersonId?: string;
 } = {}): Promise<StudySnapshot> {
   const now = options.now ?? new Date();
   const queue = await dueQueue({ setId: options.setId, now });
-  let item = queue[0] ?? null;
-  if (
-    options.skipCardId &&
-    item?.card.id === options.skipCardId &&
-    queue.length > 1
-  ) {
-    item = queue[1] ?? null;
-  }
+  const item =
+    queue.find((entry) => {
+      if (options.skipCardId && entry.card.id === options.skipCardId) return false;
+      if (options.skipPersonId && entry.person.id === options.skipPersonId) {
+        return false;
+      }
+      return true;
+    }) ?? null;
   const counts = await studyCounts({ setId: options.setId, now });
   let set: StudySnapshot["set"] = null;
   if (options.setId) {

@@ -1,9 +1,9 @@
 "use server";
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { cards, people, reviewLogs, sets } from "@/db/schema";
+import { cards, people, reviewLogs } from "@/db/schema";
 import {
   LEECH_THRESHOLD,
   MAX_ANSWER_SECONDS,
@@ -67,43 +67,16 @@ async function burySiblings(
   now: Date,
 ) {
   const db = getDb();
-  const [person] = await db
-    .select({ setId: people.setId })
-    .from(people)
-    .where(eq(people.id, personId))
-    .limit(1);
-  if (!person?.setId) return;
-
-  const [set] = await db.select().from(sets).where(eq(sets.id, person.setId)).limit(1);
-  if (!set) return;
-
-  const prefs = await getStudyPrefs();
-  const buryNew = prefs.burySiblings || set.buryNewSiblings;
-  const buryReview = prefs.burySiblings || set.buryReviewSiblings;
-  if (!buryNew && !buryReview) return;
-
-  const siblings = await db
-    .select()
-    .from(cards)
-    .where(eq(cards.personId, personId));
-
-  const until = nextUtcDay(now);
-  const ids = siblings
-    .filter((sibling) => {
-      if (sibling.id === answeredCardId) return false;
-      if (sibling.suspended) return false;
-      if (sibling.state === State.Learning || sibling.state === State.Relearning) {
-        if (sibling.scheduledDays < 1) return false;
-        return buryReview;
-      }
-      if (sibling.state === State.New) return buryNew;
-      return buryReview;
-    })
-    .map((sibling) => sibling.id);
-
-  if (ids.length) {
-    await db.update(cards).set({ buriedUntil: until }).where(inArray(cards.id, ids));
-  }
+  await db
+    .update(cards)
+    .set({ buriedUntil: nextUtcDay(now) })
+    .where(
+      and(
+        eq(cards.personId, personId),
+        ne(cards.id, answeredCardId),
+        eq(cards.suspended, false),
+      ),
+    );
 }
 
 export async function getStudyState(setId?: string): Promise<StudySnapshot> {
@@ -169,6 +142,7 @@ export async function rateCard(
     setId: setIdForCard,
     now,
     skipCardId: cardId,
+    skipPersonId: row.personId,
   });
   return { ok: true as const, leech, ...snapshot };
 }
@@ -238,11 +212,19 @@ export async function buryCard(cardId: string, scope: "card" | "note" = "card") 
       .where(and(eq(cards.personId, row.personId), eq(cards.suspended, false)));
   } else {
     await db.update(cards).set({ buriedUntil: until }).where(eq(cards.id, cardId));
+    await burySiblings(row.personId, cardId, new Date());
   }
 
   refreshStudy();
   const setId = await loadCardSetId(cardId);
-  return { ok: true as const, ...(await studySnapshot({ setId, skipCardId: cardId })) };
+  return {
+    ok: true as const,
+    ...(await studySnapshot({
+      setId,
+      skipCardId: cardId,
+      skipPersonId: row.personId,
+    })),
+  };
 }
 
 export async function suspendCard(cardId: string, scope: "card" | "note" = "card") {
@@ -265,7 +247,14 @@ export async function suspendCard(cardId: string, scope: "card" | "note" = "card
 
   refreshStudy();
   const setId = await loadCardSetId(cardId);
-  return { ok: true as const, ...(await studySnapshot({ setId, skipCardId: cardId })) };
+  return {
+    ok: true as const,
+    ...(await studySnapshot({
+      setId,
+      skipCardId: cardId,
+      skipPersonId: row.personId,
+    })),
+  };
 }
 
 export async function getStudyRecap(setId?: string) {

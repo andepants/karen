@@ -16,7 +16,7 @@ export type StudyPrefs = {
 const DEFAULT_PREFS: StudyPrefs = {
   session: DEFAULT_SESSION,
   bonus: 0,
-  burySiblings: false,
+  burySiblings: true,
   timeZone: "UTC",
 };
 
