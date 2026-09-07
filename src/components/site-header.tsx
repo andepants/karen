@@ -24,7 +24,7 @@ export function SiteHeader({
           <Link href="/people">Roster</Link>
         </Button>
         <Button variant="ghost" asChild>
-          <Link href="/settings">Settings</Link>
+          <Link href="/settings">Progress</Link>
         </Button>
         <Button variant="ghost" asChild>
           <Link href={`/study/${DEFAULT_SET_SLUG}`} className="gap-1.5">

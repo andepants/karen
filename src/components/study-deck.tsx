@@ -157,7 +157,7 @@ export function StudyDeck({
             </Button>
           ) : null}
           <Button variant="outline" asChild>
-            <Link href="/settings">Settings</Link>
+            <Link href="/settings">Progress</Link>
           </Button>
         </div>
       </div>
@@ -211,7 +211,7 @@ export function StudyDeck({
             </Button>
           ) : null}
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/settings">Settings</Link>
+            <Link href="/settings">Progress</Link>
           </Button>
         </div>
       </div>

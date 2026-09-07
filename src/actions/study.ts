@@ -75,6 +75,11 @@ async function burySiblings(
   const [set] = await db.select().from(sets).where(eq(sets.id, person.setId)).limit(1);
   if (!set) return;
 
+  const prefs = await getStudyPrefs();
+  const buryNew = prefs.burySiblings || set.buryNewSiblings;
+  const buryReview = prefs.burySiblings || set.buryReviewSiblings;
+  if (!buryNew && !buryReview) return;
+
   const siblings = await db
     .select()
     .from(cards)
@@ -87,10 +92,10 @@ async function burySiblings(
       if (sibling.suspended) return false;
       if (sibling.state === State.Learning || sibling.state === State.Relearning) {
         if (sibling.scheduledDays < 1) return false;
-        return set.buryReviewSiblings;
+        return buryReview;
       }
-      if (sibling.state === State.New) return set.buryNewSiblings;
-      return set.buryReviewSiblings;
+      if (sibling.state === State.New) return buryNew;
+      return buryReview;
     })
     .map((sibling) => sibling.id);
 
