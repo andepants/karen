@@ -153,7 +153,7 @@ export async function dueQueue(options: { setId?: string; now?: Date } = {}) {
         .from(cards)
         .innerJoin(people, eq(people.id, cards.personId))
         .where(and(active, eq(cards.state, State.New)))
-        .orderBy(asc(cards.kind), asc(people.createdAt))
+        .orderBy(asc(people.createdAt), asc(cards.kind))
         .limit(remainingNew)
     : [];
 
