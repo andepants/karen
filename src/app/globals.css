@@ -133,3 +133,123 @@
     @apply font-sans;
   }
 }
+
+.kayak-pond {
+  background: linear-gradient(
+    180deg,
+    oklch(0.93 0.03 145 / 0.35) 0%,
+    oklch(0.78 0.07 195 / 0.55) 42%,
+    oklch(0.62 0.08 200 / 0.7) 100%
+  );
+}
+
+.kayak-water {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 18px,
+      oklch(0.98 0.02 95 / 0.28) 18px 20px,
+      transparent 20px 38px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 10px,
+      oklch(0.45 0.08 200 / 0.12) 10px 12px
+    );
+  background-size: 56px 100%, 100% 22px;
+  animation: kayak-water-drift 12s linear infinite;
+}
+
+.kayak-glint {
+  background: repeating-linear-gradient(
+    100deg,
+    transparent 0 28px,
+    oklch(0.99 0.01 95 / 0.35) 28px 32px,
+    transparent 32px 64px
+  );
+  animation: kayak-water-drift 18s linear infinite reverse;
+}
+
+.kayak-cruise {
+  animation: kayak-cruise 36s linear infinite;
+  animation-delay: -8s;
+}
+
+.kayak-bob {
+  animation: kayak-bob 2.4s ease-in-out infinite;
+}
+
+.kayak-paddle {
+  animation: kayak-paddle 1.15s ease-in-out infinite;
+}
+
+.kayak-paddle-bow {
+  animation-delay: -0.58s;
+}
+
+@keyframes kayak-water-drift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 56px 0, 0 0;
+  }
+}
+
+@keyframes kayak-cruise {
+  0% {
+    left: 0;
+    transform: translateX(-100%) scaleX(1);
+  }
+  48% {
+    left: 100%;
+    transform: translateX(0) scaleX(1);
+  }
+  50% {
+    left: 100%;
+    transform: translateX(0) scaleX(-1);
+  }
+  98% {
+    left: 0;
+    transform: translateX(-100%) scaleX(-1);
+  }
+  100% {
+    left: 0;
+    transform: translateX(-100%) scaleX(1);
+  }
+}
+
+@keyframes kayak-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1.2deg);
+  }
+  50% {
+    transform: translateY(4px) rotate(1.4deg);
+  }
+}
+
+@keyframes kayak-paddle {
+  0%,
+  100% {
+    transform: rotate(-38deg);
+  }
+  50% {
+    transform: rotate(34deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kayak-water,
+  .kayak-glint,
+  .kayak-cruise,
+  .kayak-bob,
+  .kayak-paddle {
+    animation: none;
+  }
+
+  .kayak-cruise {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
