@@ -9,7 +9,7 @@ import {
   type CardRow,
 } from "./fsrs";
 import { emptyGradeCounts, summarizePeopleGrades, type GradeCounts } from "./grades";
-import { getActiveProfile, resolveProfile } from "./profiles";
+import { getActiveProfile, getProfileById, resolveProfile } from "./profiles";
 import { getStudyPrefs } from "./session-prefs";
 import { roundSize } from "./session-limits";
 import {
@@ -110,8 +110,9 @@ async function todayUsage(
   return { newToday, reviewsToday };
 }
 
-async function loadLimits(setId?: string) {
-  const prefs = await getStudyPrefs();
+async function loadLimits(setId?: string, profileId?: string) {
+  const profile = profileId ? await getProfileById(profileId) : undefined;
+  const prefs = await getStudyPrefs(profile ?? undefined);
   const dailyNew = roundSize(prefs.session) + prefs.bonus;
   if (!setId) {
     return {
@@ -134,7 +135,7 @@ export async function dueQueue(
   const setId = options.setId;
   const profileId = await resolveProfileId(options.profileId);
   const db = getDb();
-  const limits = await loadLimits(setId);
+  const limits = await loadLimits(setId, profileId);
   const usage = await todayUsage(setId, now, profileId);
   const remainingNew = Math.max(0, limits.newCardsPerDay - usage.newToday);
   const remainingReviews = Math.max(0, limits.reviewsPerDay - usage.reviewsToday);
@@ -246,7 +247,7 @@ export async function isDueCard(
   if (options.setId && row.setId !== options.setId) return false;
 
   if (row.card.state === State.New) {
-    const limits = await loadLimits(options.setId);
+    const limits = await loadLimits(options.setId, row.card.profileId ?? undefined);
     const usage = await todayUsage(options.setId, now, row.card.profileId ?? undefined);
     return usage.newToday < limits.newCardsPerDay;
   }
@@ -406,7 +407,8 @@ async function resolveSessionSample(options: {
   requested?: string[];
   persist?: boolean;
 }) {
-  const prefs = await getStudyPrefs();
+  const profile = await getProfileById(options.profileId);
+  const prefs = await getStudyPrefs(profile ?? undefined);
   const limit = roundSize(prefs.session);
   const requested = (options.requested ?? []).filter(Boolean);
   const stored = await getSessionSample(options.setId, options.profileId);
@@ -442,7 +444,7 @@ export async function studySnapshot(options: {
   const profile = options.profileSlug
     ? await resolveProfile(options.profileSlug)
     : await getActiveProfile();
-  const prefs = await getStudyPrefs();
+  const prefs = await getStudyPrefs(profile);
   const currentRound = roundSize(prefs.session);
   const openQueue = await dueQueue({
     setId: options.setId,
@@ -506,13 +508,18 @@ export async function studySnapshot(options: {
   };
 }
 
-export async function studyStats(setId: string, now = new Date()) {
+export async function studyStats(
+  setId: string,
+  now = new Date(),
+  profileId?: string,
+) {
   const db = getDb();
-  const profileId = await resolveProfileId();
-  const prefs = await getStudyPrefs();
-  const usage = await todayUsage(setId, now, profileId);
-  const counts = await studyCounts({ setId, now, profileId });
-  const remaining = await dueCount({ setId, now, profileId });
+  const scopedProfileId = await resolveProfileId(profileId);
+  const profileRow = await getProfileById(scopedProfileId);
+  const prefs = await getStudyPrefs(profileRow ?? undefined);
+  const usage = await todayUsage(setId, now, scopedProfileId);
+  const counts = await studyCounts({ setId, now, profileId: scopedProfileId });
+  const remaining = await dueCount({ setId, now, profileId: scopedProfileId });
   const roster = await db
     .select({ card: cards, person: people })
     .from(cards)
@@ -521,7 +528,7 @@ export async function studyStats(setId: string, now = new Date()) {
       and(
         eq(people.setId, setId),
         eq(people.archived, false),
-        eq(cards.profileId, profileId),
+        eq(cards.profileId, scopedProfileId),
       ),
     );
 
@@ -535,7 +542,7 @@ export async function studyStats(setId: string, now = new Date()) {
     }
   }
 
-  const grades = await rosterGrades(setId, now);
+  const grades = await rosterGrades(setId, now, scopedProfileId);
 
   return {
     prefs,

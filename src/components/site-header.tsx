@@ -1,23 +1,30 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { lockEditor } from "@/actions/auth";
-import { useProfile } from "@/components/profile-context";
 import { Button } from "@/components/ui/button";
+import {
+  DEFAULT_PROFILE_SLUG,
+  profileHref,
+  profileSlugFromPathname,
+} from "@/lib/profile-path";
 import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 import { LilyMark } from "./lily-garden";
 
 export function SiteHeader({
   isEditor,
   dueCount,
+  profileSlug = DEFAULT_PROFILE_SLUG,
 }: {
   isEditor: boolean;
   dueCount: number;
   profileSlug?: string;
 }) {
-  const profile = useProfile();
+  const pathname = usePathname() || "/";
+  const slug =
+    profileSlugFromPathname(pathname) ?? profileSlug ?? DEFAULT_PROFILE_SLUG;
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,12 +47,12 @@ export function SiteHeader({
 
   return (
     <header className="relative z-20 flex items-center justify-between gap-4 px-6 py-5">
-      <Link href={profile.href()} className="flex items-center gap-2">
+      <a href={profileHref(slug)} className="flex items-center gap-2">
         <LilyMark className="h-10 w-8" />
         <span className="font-heading text-xl tracking-wide text-foreground">
           Karen&apos;s Flashcards
         </span>
-      </Link>
+      </a>
       <div ref={menuRef} className="relative">
         <Button
           type="button"
@@ -59,10 +66,9 @@ export function SiteHeader({
         </Button>
         {open ? (
           <nav className="absolute right-0 top-12 z-40 flex w-56 flex-col rounded-2xl bg-card p-2 shadow-lg ring-1 ring-border">
-            <Link
-              href={profile.href(`/study/${DEFAULT_SET_SLUG}`)}
+            <a
+              href={profileHref(slug, `/study/${DEFAULT_SET_SLUG}`)}
               className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
-              onClick={() => setOpen(false)}
             >
               Study
               {dueCount > 0 ? (
@@ -70,21 +76,19 @@ export function SiteHeader({
                   {dueCount}
                 </span>
               ) : null}
-            </Link>
-            <Link
-              href={profile.href("/people")}
+            </a>
+            <a
+              href={profileHref(slug, "/people")}
               className="rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
-              onClick={() => setOpen(false)}
             >
               Roster
-            </Link>
-            <Link
-              href={profile.href("/settings")}
+            </a>
+            <a
+              href={profileHref(slug, "/settings")}
               className="rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
-              onClick={() => setOpen(false)}
             >
               Options
-            </Link>
+            </a>
             {isEditor ? (
               <form action={lockEditor}>
                 <button

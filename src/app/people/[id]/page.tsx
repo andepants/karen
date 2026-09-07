@@ -12,16 +12,18 @@ import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 
 export default async function PersonPage({
   params,
+  profileSlug,
 }: {
-  params: Promise<{ id: string; profile?: string }>;
+  params: Promise<{ id: string }>;
+  profileSlug?: string;
 }) {
-  const { id, profile: routeSlug } = await params;
+  const { id } = await params;
   await ensureTestSets().catch(() => null);
   const db = getDb();
   const [person] = await db.select().from(people).where(eq(people.id, id)).limit(1);
   if (!person || person.archived) notFound();
 
-  const profile = await getActiveProfile(routeSlug);
+  const profile = await getActiveProfile(profileSlug);
   const cardRows = await db
     .select()
     .from(cards)

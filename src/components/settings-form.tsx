@@ -34,6 +34,7 @@ export function SettingsForm({
   function persist(nextSession = value, form?: HTMLFormElement | null) {
     const data = new FormData(form ?? undefined);
     data.set("session", String(nextSession));
+    data.set("profileSlug", profileSlug);
     if (!form) {
       if (burySiblings) data.set("burySiblings", "on");
     }
@@ -55,6 +56,7 @@ export function SettingsForm({
         className="space-y-5"
         action={async (formData) => {
           formData.set("session", String(value));
+          formData.set("profileSlug", profileSlug);
           await saveStudySettings(formData);
           router.refresh();
         }}
@@ -104,6 +106,7 @@ export function SettingsForm({
             </span>
           </span>
         </label>
+        <input type="hidden" name="profileSlug" value={profileSlug} />
         <Button type="submit">Save</Button>
       </form>
       <div className="flex flex-wrap gap-2">
@@ -125,7 +128,7 @@ export function SettingsForm({
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
-              await resetStudyBonus();
+              await resetStudyBonus(profileSlug);
               router.refresh();
             })
           }
@@ -144,7 +147,7 @@ export function SettingsForm({
               return;
             }
             startTransition(async () => {
-              await resetStudyProgress();
+              await resetStudyProgress(profileSlug);
               router.refresh();
             });
           }}

@@ -24,22 +24,21 @@ async function shareOrigin() {
 }
 
 export default async function SettingsPage({
-  params,
+  profileSlug,
 }: {
-  params?: Promise<{ profile?: string }>;
-}) {
-  const routeSlug = params ? (await params).profile : undefined;
+  profileSlug?: string;
+} = {}) {
   const editor = await isEditor();
   const deck = await ensureDefaultSet().catch((error) => {
     console.error("settings deck", error);
     return null;
   });
   const [activeProfile, allProfiles] = await Promise.all([
-    getActiveProfile(routeSlug),
+    getActiveProfile(profileSlug),
     listProfiles(),
   ]);
   const stats = deck
-    ? await studyStats(deck.id).catch((error) => {
+    ? await studyStats(deck.id, new Date(), activeProfile.id).catch((error) => {
         console.error("settings stats", error);
         return null;
       })
@@ -59,7 +58,9 @@ export default async function SettingsPage({
 
   return (
     <main className="mx-auto max-w-2xl space-y-12 px-6 py-10">
-      {progress ? <SyncTimeZone current={progress.timeZone} /> : null}
+      {progress ? (
+        <SyncTimeZone current={progress.timeZone} profileSlug={activeProfile.slug} />
+      ) : null}
       <div>
         <h1 className="font-heading text-5xl">Options</h1>
         <p className="mt-2 text-muted-foreground">

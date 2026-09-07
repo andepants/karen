@@ -12,13 +12,12 @@ import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 import { getSetBySlug } from "@/lib/sets";
 
 export default async function PeoplePage({
-  params,
+  profileSlug,
   searchParams,
 }: {
-  params?: Promise<{ profile?: string }>;
+  profileSlug?: string;
   searchParams: Promise<{ set?: string }>;
 }) {
-  const routeSlug = params ? (await params).profile : undefined;
   const editor = await isEditor();
   const { set: setSlug } = await searchParams;
   const selected = setSlug ? await getSetBySlug(setSlug).catch(() => null) : null;
@@ -26,11 +25,11 @@ export default async function PeoplePage({
   let roster: (typeof people.$inferSelect)[] = [];
   let allSets: (typeof sets.$inferSelect)[] = [];
   const grades: Record<string, MemoryGrade> = {};
-  let profileSlug = "karen";
+  let activeSlug = profileSlug ?? "karen";
   try {
     await ensureTestSets();
-    const profile = await getActiveProfile(routeSlug);
-    profileSlug = profile.slug;
+    const profile = await getActiveProfile(profileSlug);
+    activeSlug = profile.slug;
     const db = getDb();
     allSets = await db.select().from(sets).orderBy(asc(sets.name));
     const rows = editor
@@ -65,7 +64,7 @@ export default async function PeoplePage({
         <Button size="lg" className="rounded-full px-8" asChild>
           <Link
             href={profileHref(
-              profileSlug,
+              activeSlug,
               `/study/${selected?.slug ?? DEFAULT_SET_SLUG}`,
             )}
           >
@@ -82,7 +81,7 @@ export default async function PeoplePage({
             sets={allSets}
             isEditor={editor}
             grades={grades}
-            profileSlug={profileSlug}
+            profileSlug={activeSlug}
           />
         )}
       </div>

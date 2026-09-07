@@ -15,13 +15,12 @@ async function shareOrigin() {
 }
 
 export default async function HomePage({
-  params,
+  profileSlug,
 }: {
-  params?: Promise<{ profile?: string }>;
-}) {
-  const routeSlug = params ? (await params).profile : undefined;
+  profileSlug?: string;
+} = {}) {
   const deck = await ensureDefaultSet().catch(() => null);
-  const profile = await getActiveProfile(routeSlug);
+  const profile = await getActiveProfile(profileSlug);
   const profiles = await listProfiles();
   const studyHref = profileHref(
     profile.slug,

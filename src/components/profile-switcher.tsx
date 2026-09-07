@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
@@ -45,7 +44,7 @@ export function ProfileSwitcher({
       }
       setOpen(false);
       setName("");
-      router.push(result.href);
+      window.location.assign(result.href);
     });
   }
 
@@ -56,7 +55,7 @@ export function ProfileSwitcher({
         {profiles.map((profile) => {
           const selected = profile.slug === activeSlug;
           return (
-            <Link
+            <a
               key={profile.slug}
               href={replaceProfileInPath(pathname, profile.slug)}
               aria-current={selected ? "page" : undefined}
@@ -67,7 +66,7 @@ export function ProfileSwitcher({
               }`}
             >
               {profile.name}
-            </Link>
+            </a>
           );
         })}
         <button

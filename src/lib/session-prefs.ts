@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { isValidTimeZone } from "./dates";
-import { getActiveProfile, updateProfileSettings } from "./profiles";
+import {
+  getActiveProfile,
+  updateProfileSettings,
+  type ProfileRow,
+} from "./profiles";
 import { DEFAULT_SESSION, roundSize } from "./session-limits";
 
 export {
@@ -29,8 +33,8 @@ type CookiePrefs = {
 
 const DEFAULT_TIME_ZONE = "UTC";
 
-export async function getStudyPrefs(): Promise<StudyPrefs> {
-  const profile = await getActiveProfile();
+export async function getStudyPrefs(profile?: ProfileRow): Promise<StudyPrefs> {
+  const row = profile ?? (await getActiveProfile());
   const store = await cookies();
   const raw = store.get(COOKIE)?.value;
   let cookie: CookiePrefs = {};
@@ -42,21 +46,21 @@ export async function getStudyPrefs(): Promise<StudyPrefs> {
     }
   }
   return {
-    session: roundSize(profile.session || DEFAULT_SESSION),
+    session: roundSize(row.session || DEFAULT_SESSION),
     bonus:
-      cookie.bonusProfileId === profile.id
+      cookie.bonusProfileId === row.id
         ? Math.max(0, Math.round(Number(cookie.bonus) || 0))
         : 0,
-    burySiblings: profile.burySiblings,
+    burySiblings: row.burySiblings,
     timeZone: isValidTimeZone(String(cookie.timeZone || ""))
       ? String(cookie.timeZone)
       : DEFAULT_TIME_ZONE,
   };
 }
 
-export async function writeStudyPrefs(prefs: StudyPrefs) {
-  const profile = await getActiveProfile();
-  await updateProfileSettings(profile.id, {
+export async function writeStudyPrefs(prefs: StudyPrefs, profile?: ProfileRow) {
+  const row = profile ?? (await getActiveProfile());
+  await updateProfileSettings(row.id, {
     session: roundSize(prefs.session),
     burySiblings: prefs.burySiblings,
   });
@@ -65,7 +69,7 @@ export async function writeStudyPrefs(prefs: StudyPrefs) {
     COOKIE,
     JSON.stringify({
       bonus: Math.max(0, Math.round(prefs.bonus || 0)),
-      bonusProfileId: profile.id,
+      bonusProfileId: row.id,
       timeZone: isValidTimeZone(prefs.timeZone) ? prefs.timeZone : DEFAULT_TIME_ZONE,
     } satisfies CookiePrefs),
     {

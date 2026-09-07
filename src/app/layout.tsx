@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Cormorant_Garamond, Figtree } from "next/font/google";
 import { ProfileProvider } from "@/components/profile-context";
-import { getActiveProfile } from "@/lib/profiles";
 import "./globals.css";
 
 const serif = Cormorant_Garamond({
@@ -28,20 +27,13 @@ export default async function RootLayout({
 }: {
   children: ReactNode;
 }) {
-  let initialSlug = "karen";
-  try {
-    initialSlug = (await getActiveProfile()).slug;
-  } catch {
-    initialSlug = "karen";
-  }
-
   return (
     <html
       lang="en"
       className={`${serif.variable} ${sans.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <ProfileProvider initialSlug={initialSlug}>
+        <ProfileProvider>
           <div className="flex-1">{children}</div>
         </ProfileProvider>
       </body>

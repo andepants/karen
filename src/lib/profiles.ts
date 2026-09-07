@@ -86,6 +86,16 @@ export async function readRequestedProfileSlug() {
   return DEFAULT_PROFILE_SLUG;
 }
 
+export async function getProfileById(id: string) {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(profiles)
+    .where(eq(profiles.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function getProfileBySlug(slug: string) {
   const db = getDb();
   const [row] = await db
