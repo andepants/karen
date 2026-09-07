@@ -23,12 +23,9 @@ export function PersonFacts({
         {title}
       </p>
       {visible.length ? (
-        <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+        <ul className="list-disc space-y-1.5 pl-4 text-sm leading-snug text-foreground/80">
           {visible.map((fact) => (
-            <li key={fact} className="flex gap-2">
-              <span className="mt-2 size-1 shrink-0 rounded-full bg-primary/50" />
-              <span>{fact}</span>
-            </li>
+            <li key={fact}>{fact}</li>
           ))}
         </ul>
       ) : (
