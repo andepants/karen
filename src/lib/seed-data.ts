@@ -27,7 +27,7 @@ export const seedSets: SeedSet[] = [
     slug: DEFAULT_SET_SLUG,
     name: "Austin Area OBGYN",
     description: "The Austin Area OBGYN team.",
-    newCardsPerDay: 80,
+    newCardsPerDay: 10,
     buryNewSiblings: false,
     buryReviewSiblings: false,
     people: [

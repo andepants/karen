@@ -20,6 +20,8 @@ import {
   studySnapshot,
   type StudySnapshot,
 } from "@/lib/queue";
+import { formatStudyTime } from "@/lib/dates";
+import { progressStats } from "@/lib/progress";
 import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
 
 function refreshStudy() {
@@ -266,12 +268,41 @@ export async function suspendCard(cardId: string, scope: "card" | "note" = "card
   return { ok: true as const, ...(await studySnapshot({ setId, skipCardId: cardId })) };
 }
 
-export async function studyMore(setId: string, extra = 20) {
+export async function getStudyRecap(setId?: string) {
+  if (!setId) return { error: "No deck." };
+  await ensureSchema();
+  const prefs = await getStudyPrefs();
+  const progress = await progressStats(setId, { timeZone: prefs.timeZone });
+  const todayRated =
+    progress.today.again +
+    progress.today.hard +
+    progress.today.good +
+    progress.today.easy;
+  return {
+    ok: true as const,
+    todayCount: progress.today.count,
+    todayNew: progress.today.newCount,
+    todayReview: progress.today.reviewCount,
+    todayTime: formatStudyTime(progress.today.timeMs),
+    todayRatings: {
+      again: progress.today.again,
+      hard: progress.today.hard,
+      good: progress.today.good,
+      easy: progress.today.easy,
+    },
+    rememberedPct: todayRated
+      ? Math.round(((progress.today.good + progress.today.easy) / todayRated) * 100)
+      : 0,
+    streak: progress.streak,
+  };
+}
+
+export async function studyMore(setId: string, extra?: number) {
   await ensureSchema();
   const prefs = await getStudyPrefs();
   await writeStudyPrefs({
     ...prefs,
-    bonus: prefs.bonus + Math.max(10, extra),
+    bonus: prefs.bonus + Math.max(prefs.session, extra ?? prefs.session),
   });
   await unburySet(setId);
   refreshStudy();

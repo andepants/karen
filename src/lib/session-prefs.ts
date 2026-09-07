@@ -1,5 +1,8 @@
 import { cookies } from "next/headers";
 import { isValidTimeZone } from "./dates";
+import { DEFAULT_SESSION, snapSession } from "./session-limits";
+
+export { DEFAULT_SESSION, SESSION_MAX, SESSION_MIN, SESSION_STEP, snapSession } from "./session-limits";
 
 const COOKIE = "karen_study_prefs";
 
@@ -11,15 +14,11 @@ export type StudyPrefs = {
 };
 
 const DEFAULT_PREFS: StudyPrefs = {
-  session: 80,
+  session: DEFAULT_SESSION,
   bonus: 0,
   burySiblings: false,
   timeZone: "UTC",
 };
-
-function clampSession(value: number) {
-  return Math.min(200, Math.max(10, Math.round(value)));
-}
 
 export async function getStudyPrefs(): Promise<StudyPrefs> {
   const store = await cookies();
@@ -28,7 +27,7 @@ export async function getStudyPrefs(): Promise<StudyPrefs> {
   try {
     const parsed = JSON.parse(raw) as Partial<StudyPrefs>;
     return {
-      session: clampSession(Number(parsed.session) || DEFAULT_PREFS.session),
+      session: snapSession(Number(parsed.session) || DEFAULT_PREFS.session),
       bonus: Math.max(0, Math.round(Number(parsed.bonus) || 0)),
       burySiblings: Boolean(parsed.burySiblings),
       timeZone: isValidTimeZone(String(parsed.timeZone || ""))

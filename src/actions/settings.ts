@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { isValidTimeZone } from "@/lib/dates";
+import { snapSession } from "@/lib/session-limits";
 import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
 
 function refreshSettings() {
@@ -15,7 +16,7 @@ export async function saveStudySettings(formData: FormData) {
   const prefs = await getStudyPrefs();
   await writeStudyPrefs({
     ...prefs,
-    session: Number.isFinite(session) ? session : prefs.session,
+    session: Number.isFinite(session) ? snapSession(session) : prefs.session,
     burySiblings: formData.get("burySiblings") === "on",
   });
   refreshSettings();

@@ -20,6 +20,9 @@ export type DayProgress = {
   newCount: number;
   reviewCount: number;
   again: number;
+  hard: number;
+  good: number;
+  easy: number;
   timeMs: number;
   isToday: boolean;
 };
@@ -68,6 +71,9 @@ function emptyDay(date: string, today: string): DayProgress {
     newCount: 0,
     reviewCount: 0,
     again: 0,
+    hard: 0,
+    good: 0,
+    easy: 0,
     timeMs: 0,
     isToday: date === today,
   };
@@ -160,10 +166,13 @@ export async function progressStats(
       day.again += 1;
       ratings.again += 1;
     } else if (row.rating === Rating.Hard) {
+      day.hard += 1;
       ratings.hard += 1;
     } else if (row.rating === Rating.Good) {
+      day.good += 1;
       ratings.good += 1;
     } else if (row.rating === Rating.Easy) {
+      day.easy += 1;
       ratings.easy += 1;
     }
     day.timeMs += row.reviewTimeMs ?? 0;

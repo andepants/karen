@@ -18,7 +18,7 @@ export const previewScheduler = fsrs({
   enable_fuzz: false,
 });
 
-export const NEW_CARDS_PER_DAY = 80;
+export const NEW_CARDS_PER_DAY = 10;
 export const REVIEWS_PER_DAY = 200;
 export const LEECH_THRESHOLD = 8;
 export const MAX_ANSWER_SECONDS = 60;

@@ -10,6 +10,11 @@ import {
   undoLastReview,
 } from "@/actions/study";
 import { PersonFacts } from "@/components/person-facts";
+import {
+  SessionRecap,
+  addSessionRating,
+  emptySessionScore,
+} from "@/components/session-recap";
 import { Rating, stateLabel } from "@/lib/fsrs";
 import { gradeTone, memoryGrade } from "@/lib/grades";
 import { Button } from "@/components/ui/button";
@@ -56,6 +61,7 @@ export function StudyDeck({
   const [error, setError] = useState<string | null>(null);
   const [leechNote, setLeechNote] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [session, setSession] = useState(emptySessionScore);
   const startedAt = useRef(Date.now());
   const itemRef = useRef(item);
 
@@ -72,7 +78,10 @@ export function StudyDeck({
     return () => window.clearInterval(timer);
   }, [item?.card.id]);
 
-  function run(action: () => Promise<StudySnapshot | { error: string } | { ok: true } & StudySnapshot>) {
+  function run(
+    action: () => Promise<StudySnapshot | { error: string } | { ok: true } & StudySnapshot>,
+    scored?: { rating: number; timeMs: number },
+  ) {
     setError(null);
     startTransition(async () => {
       const result = await action();
@@ -83,6 +92,9 @@ export function StudyDeck({
       if (!("item" in result)) return;
       if ("leech" in result) setLeechNote(Boolean(result.leech));
       else setLeechNote(false);
+      if (scored) {
+        setSession((current) => addSessionRating(current, scored.rating, scored.timeMs));
+      }
       setFlipped(false);
       setRevealed(false);
       applySnapshot(result, setItem, setLeft, setCounts, setIntervals, setCanUndo);
@@ -92,33 +104,23 @@ export function StudyDeck({
   function grade(rating: number) {
     if (!itemRef.current) return;
     const current = itemRef.current;
-    run(() =>
-      rateCard(current.card.id, rating, Date.now() - startedAt.current),
-    );
+    const timeMs = Date.now() - startedAt.current;
+    run(() => rateCard(current.card.id, rating, timeMs), { rating, timeMs });
   }
 
   if (!item) {
     return (
-      <div className="mx-auto max-w-lg rounded-3xl bg-card/80 px-8 py-16 text-center shadow-sm">
-        <p className="text-sm text-muted-foreground">
-          {initial.set?.name ?? "Study"}
-        </p>
-        <h1 className="mt-3 font-heading text-4xl">That&apos;s all for now.</h1>
-        <p className="mt-3 text-muted-foreground">Keep going, or pick it up later.</p>
-        <div className="mt-8 flex justify-center gap-3">
-          {initial.set?.id ? (
-            <Button
-              disabled={pending}
-              onClick={() => run(() => studyMore(initial.set!.id))}
-            >
-              Study more
-            </Button>
-          ) : null}
-          <Button variant="outline" asChild>
-            <Link href="/settings">Options</Link>
-          </Button>
-        </div>
-      </div>
+      <SessionRecap
+        setName={initial.set?.name ?? "Study"}
+        setId={initial.set?.id}
+        session={session}
+        pending={pending}
+        onStudyMore={() => {
+          if (!initial.set?.id) return;
+          setSession(emptySessionScore());
+          run(() => studyMore(initial.set!.id));
+        }}
+      />
     );
   }
 

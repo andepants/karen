@@ -1,12 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { resetStudyBonus, saveStudySettings } from "@/actions/settings";
 import { studyMore } from "@/actions/study";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
+import {
+  DEFAULT_SESSION,
+  SESSION_MAX,
+  SESSION_MIN,
+  SESSION_STEP,
+  snapSession,
+} from "@/lib/session-limits";
 
 export function SettingsForm({
   session,
@@ -19,6 +26,19 @@ export function SettingsForm({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [value, setValue] = useState(snapSession(session || DEFAULT_SESSION));
+
+  function persist(nextSession = value, form?: HTMLFormElement | null) {
+    const data = new FormData(form ?? undefined);
+    data.set("session", String(nextSession));
+    if (!form) {
+      if (burySiblings) data.set("burySiblings", "on");
+    }
+    startTransition(async () => {
+      await saveStudySettings(data);
+      router.refresh();
+    });
+  }
 
   return (
     <section className="space-y-5">
@@ -31,27 +51,41 @@ export function SettingsForm({
       <form
         className="space-y-5"
         action={async (formData) => {
+          formData.set("session", String(value));
           await saveStudySettings(formData);
           router.refresh();
         }}
       >
-        <div className="space-y-2">
-          <Label htmlFor="session">Cards per session</Label>
+        <div className="space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <Label htmlFor="session">Cards per session</Label>
+            <p className="font-heading text-3xl tabular-nums">{value}</p>
+          </div>
           <p className="text-sm text-muted-foreground">
             New cards you can start in a day. Study more adds extra when you finish.
           </p>
-          <select
+          <input
             id="session"
             name="session"
-            defaultValue={session}
-            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-          >
-            {[20, 40, 80, 120].map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
+            type="range"
+            min={SESSION_MIN}
+            max={SESSION_MAX}
+            step={SESSION_STEP}
+            value={value}
+            onChange={(event) => setValue(snapSession(Number(event.target.value)))}
+            onPointerUp={(event) =>
+              persist(
+                snapSession(Number(event.currentTarget.value)),
+                event.currentTarget.form,
+              )
+            }
+            className="h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary"
+            style={{ accentColor: "var(--primary)" }}
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{SESSION_MIN}</span>
+            <span>{SESSION_MAX}</span>
+          </div>
         </div>
         <label className="flex items-start gap-3 rounded-2xl bg-card/80 px-4 py-3 ring-1 ring-border">
           <input

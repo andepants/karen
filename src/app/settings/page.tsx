@@ -77,7 +77,7 @@ export default async function SettingsPage() {
       )}
 
       <SettingsForm
-        session={stats?.prefs.session ?? 80}
+        session={stats?.prefs.session ?? 10}
         burySiblings={stats?.prefs.burySiblings ?? false}
         setId={deck?.id}
       />
