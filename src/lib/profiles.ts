@@ -31,7 +31,9 @@ async function prunePresetProfiles() {
   const extras = rows.filter(
     (row) =>
       row.slug !== DEFAULT_PROFILE_SLUG &&
-      (isNumberedProfileSlug(row.slug) || row.slug === "pat"),
+      (isNumberedProfileSlug(row.slug) ||
+        row.slug === "pat" ||
+        row.slug === "not-pat"),
   );
   for (const row of extras) {
     await db.delete(profiles).where(eq(profiles.id, row.id));
