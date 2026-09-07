@@ -1,8 +1,15 @@
 import { cookies } from "next/headers";
 import { isValidTimeZone } from "./dates";
-import { DEFAULT_SESSION, snapSession } from "./session-limits";
+import { DEFAULT_SESSION, roundSize } from "./session-limits";
 
-export { DEFAULT_SESSION, SESSION_MAX, SESSION_MIN, SESSION_STEP, snapSession } from "./session-limits";
+export {
+  DEFAULT_SESSION,
+  SESSION_MAX,
+  SESSION_MIN,
+  SESSION_STEP,
+  roundSize,
+  snapSession,
+} from "./session-limits";
 
 const COOKIE = "karen_study_prefs";
 
@@ -27,7 +34,7 @@ export async function getStudyPrefs(): Promise<StudyPrefs> {
   try {
     const parsed = JSON.parse(raw) as Partial<StudyPrefs>;
     return {
-      session: snapSession(Number(parsed.session) || DEFAULT_PREFS.session),
+      session: roundSize(Number(parsed.session) || DEFAULT_PREFS.session),
       bonus: Math.max(0, Math.round(Number(parsed.bonus) || 0)),
       burySiblings: Boolean(parsed.burySiblings),
       timeZone: isValidTimeZone(String(parsed.timeZone || ""))

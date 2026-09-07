@@ -23,6 +23,7 @@ import {
 import { formatStudyTime } from "@/lib/dates";
 import { progressStats } from "@/lib/progress";
 import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
+import { roundSize } from "@/lib/session-limits";
 import { clearSessionSample } from "@/lib/session-sample";
 
 function refreshStudy() {
@@ -328,7 +329,7 @@ export async function studyMore(setId: string, extra?: number) {
   const prefs = await getStudyPrefs();
   await writeStudyPrefs({
     ...prefs,
-    bonus: prefs.bonus + Math.max(prefs.session, extra ?? prefs.session),
+    bonus: prefs.bonus + roundSize(extra ?? prefs.session),
   });
   await clearSessionSample();
   await unburySet(setId);

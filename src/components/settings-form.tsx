@@ -58,11 +58,11 @@ export function SettingsForm({
       >
         <div className="space-y-3">
           <div className="flex items-end justify-between gap-3">
-            <Label htmlFor="session">Cards per session</Label>
+            <Label htmlFor="session">Cards in a round</Label>
             <p className="font-heading text-3xl tabular-nums">{value}</p>
           </div>
           <p className="text-sm text-muted-foreground">
-            New cards you can start in a day. Study more adds extra when you finish.
+            One round is this many cards, then you get a recap. Study more starts another round.
           </p>
           <input
             id="session"

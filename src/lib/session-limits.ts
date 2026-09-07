@@ -8,3 +8,7 @@ export function snapSession(value: number) {
   const snapped = Math.round(value / SESSION_STEP) * SESSION_STEP;
   return Math.min(SESSION_MAX, Math.max(SESSION_MIN, snapped));
 }
+
+export function roundSize(session?: number) {
+  return snapSession(session || DEFAULT_SESSION);
+}

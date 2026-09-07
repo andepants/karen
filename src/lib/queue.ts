@@ -2,7 +2,6 @@ import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-
 import { getDb } from "@/db";
 import { cards, people, reviewLogs, sets } from "@/db/schema";
 import {
-  NEW_CARDS_PER_DAY,
   REVIEWS_PER_DAY,
   State,
   isInterdayLearning,
@@ -10,6 +9,7 @@ import {
   type CardRow,
 } from "./fsrs";
 import { getStudyPrefs } from "./session-prefs";
+import { roundSize } from "./session-limits";
 import {
   getSessionSample,
   writeSessionSample,
@@ -38,6 +38,7 @@ export type StudySnapshot = {
   canUndo: boolean;
   set: Pick<SetRow, "id" | "slug" | "name" | "description"> | null;
   samplePersonIds: string[];
+  roundSize: number;
 };
 
 export function startOfUtcDay(now = new Date()) {
@@ -91,16 +92,17 @@ async function todayUsage(setId: string | undefined, now: Date) {
 
 async function loadLimits(setId?: string) {
   const prefs = await getStudyPrefs();
+  const dailyNew = roundSize(prefs.session) + prefs.bonus;
   if (!setId) {
     return {
-      newCardsPerDay: prefs.session + prefs.bonus,
+      newCardsPerDay: dailyNew,
       reviewsPerDay: REVIEWS_PER_DAY,
     };
   }
   const db = getDb();
   const [row] = await db.select().from(sets).where(eq(sets.id, setId)).limit(1);
   return {
-    newCardsPerDay: (prefs.session || row?.newCardsPerDay || NEW_CARDS_PER_DAY) + prefs.bonus,
+    newCardsPerDay: dailyNew,
     reviewsPerDay: row?.reviewsPerDay ?? REVIEWS_PER_DAY,
   };
 }
@@ -304,13 +306,15 @@ async function resolveSessionSample(options: {
   persist?: boolean;
 }) {
   const prefs = await getStudyPrefs();
-  const limit = prefs.session + prefs.bonus;
+  const limit = roundSize(prefs.session);
   const requested = (options.requested ?? []).filter(Boolean);
   const stored = await getSessionSample(options.setId);
   let sample = stored?.personIds ?? (requested.length ? requested : null);
 
   if (!sample) {
-    sample = shuffle(options.duePeople).slice(0, Math.max(1, limit));
+    sample = shuffle(options.duePeople).slice(0, limit);
+  } else if (sample.length > limit) {
+    sample = sample.slice(0, limit);
   } else if (sample.length < limit) {
     const extra = shuffle(
       options.duePeople.filter((id) => !sample!.includes(id)),
@@ -333,6 +337,8 @@ export async function studySnapshot(options: {
   persistSample?: boolean;
 } = {}): Promise<StudySnapshot> {
   const now = options.now ?? new Date();
+  const prefs = await getStudyPrefs();
+  const currentRound = roundSize(prefs.session);
   const openQueue = await dueQueue({ setId: options.setId, now });
   const samplePersonIds = await resolveSessionSample({
     setId: options.setId,
@@ -375,6 +381,7 @@ export async function studySnapshot(options: {
     canUndo: await canUndoLast(options.setId),
     set,
     samplePersonIds,
+    roundSize: currentRound,
   };
 }
 

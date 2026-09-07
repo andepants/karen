@@ -127,7 +127,7 @@ export function ProgressDashboard({
           value={String(remaining)}
           detail={
             bonus
-              ? `${bonus} extra cards in this session`
+              ? `${bonus} extra cards unlocked for more rounds today`
               : `${people} people · photo and name cards for each`
           }
         />

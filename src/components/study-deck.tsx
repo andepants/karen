@@ -18,7 +18,7 @@ import {
 } from "@/components/session-recap";
 import { Rating } from "@/lib/fsrs";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_SESSION } from "@/lib/session-limits";
+import { DEFAULT_SESSION, roundSize } from "@/lib/session-limits";
 import type { StudySnapshot } from "@/lib/queue";
 
 const PROMPT_KEY = "karen-prompt";
@@ -52,13 +52,10 @@ function readPrompt(): PromptSide {
 
 export function StudyDeck({
   initial,
-  sessionGoal = DEFAULT_SESSION,
-  sessionSize = DEFAULT_SESSION,
 }: {
   initial: StudySnapshot;
-  sessionGoal?: number;
-  sessionSize?: number;
 }) {
+  const sessionSize = roundSize(initial.roundSize || DEFAULT_SESSION);
   const [item, setItem] = useState(initial.item);
   const [left, setLeft] = useState(initial.remaining);
   const [counts, setCounts] = useState(initial.counts);
@@ -71,7 +68,6 @@ export function StudyDeck({
   const [leechNote, setLeechNote] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [session, setSession] = useState(emptySessionScore);
-  const [goal, setGoal] = useState(sessionGoal);
   const [prompt, setPrompt] = useState<PromptSide>("picture");
   const [cardPrompt, setCardPrompt] = useState<PromptSide>("picture");
   const startedAt = useRef(Date.now());
@@ -144,7 +140,7 @@ export function StudyDeck({
     });
   }
 
-  if (!item) {
+  if (!item || session.cards >= sessionSize) {
     return (
       <SessionRecap
         setName={initial.set?.name ?? "Study"}
@@ -154,9 +150,8 @@ export function StudyDeck({
         onStudyMore={() => {
           if (!initial.set?.id) return;
           setSession(emptySessionScore());
-          setGoal((current) => current + sessionSize);
           sampleRef.current = [];
-          run(() => studyMore(initial.set!.id));
+          run(() => studyMore(initial.set!.id, sessionSize));
         }}
       />
     );
@@ -164,7 +159,7 @@ export function StudyDeck({
 
   const pictureFirst = cardPrompt === "picture";
   const current = session.cards + 1;
-  const total = Math.max(goal, current);
+  const total = sessionSize;
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5 pb-28">

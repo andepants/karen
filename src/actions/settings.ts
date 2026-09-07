@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { isValidTimeZone } from "@/lib/dates";
-import { snapSession } from "@/lib/session-limits";
+import { roundSize } from "@/lib/session-limits";
 import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
+import { clearSessionSample } from "@/lib/session-sample";
 
 function refreshSettings() {
   revalidatePath("/settings");
@@ -16,9 +17,11 @@ export async function saveStudySettings(formData: FormData) {
   const prefs = await getStudyPrefs();
   await writeStudyPrefs({
     ...prefs,
-    session: Number.isFinite(session) ? snapSession(session) : prefs.session,
+    session: Number.isFinite(session) ? roundSize(session) : prefs.session,
+    bonus: 0,
     burySiblings: formData.get("burySiblings") === "on",
   });
+  await clearSessionSample();
   refreshSettings();
 }
 

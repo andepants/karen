@@ -84,7 +84,7 @@ export function SessionRecap({
         <p className="text-sm text-muted-foreground">{setName}</p>
         <h1 className="mt-3 font-heading text-4xl">Nice work.</h1>
         <p className="mt-3 text-muted-foreground">
-          That set is done. Here is how you did.
+          That round is done. Here is how you did.
         </p>
       </div>
 
