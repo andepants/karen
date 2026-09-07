@@ -7,7 +7,7 @@ import { cards, people } from "@/db/schema";
 import { requireEditor } from "@/lib/auth";
 import { cardInsertValues } from "@/lib/fsrs";
 import { normalizeName } from "@/lib/names";
-import { storePhotoFromFile } from "@/lib/photos";
+import { isAllowedPhotoFile, storePhotoFromFile } from "@/lib/photos";
 
 function refreshPeople() {
   revalidatePath("/people");
@@ -25,6 +25,9 @@ export async function createPerson(formData: FormData) {
   if (!name) {
     return { error: "Name is required." };
   }
+  if (photo instanceof File && photo.size > 0 && !isAllowedPhotoFile(photo)) {
+    return { error: "Photo must be an image under 12 MB." };
+  }
 
   const db = getDb();
   const now = new Date();
@@ -40,6 +43,9 @@ export async function createPerson(formData: FormData) {
 
   if (photo instanceof File && photo.size > 0) {
     const photoUrl = await storePhotoFromFile(photo, person.id);
+    if (!photoUrl) {
+      return { error: "Photo must be an image under 12 MB." };
+    }
     await db.update(people).set({ photoUrl, updatedAt: now }).where(eq(people.id, person.id));
   }
 
@@ -58,12 +64,18 @@ export async function updatePerson(formData: FormData) {
   if (!id || !name) {
     return { error: "Name is required." };
   }
+  if (photo instanceof File && photo.size > 0 && !isAllowedPhotoFile(photo)) {
+    return { error: "Photo must be an image under 12 MB." };
+  }
 
   const db = getDb();
   const now = new Date();
   let photoUrl: string | undefined;
   if (photo instanceof File && photo.size > 0) {
-    photoUrl = await storePhotoFromFile(photo, id);
+    photoUrl = await storePhotoFromFile(photo, id) ?? undefined;
+    if (!photoUrl) {
+      return { error: "Photo must be an image under 12 MB." };
+    }
   }
 
   await db

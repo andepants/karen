@@ -7,6 +7,13 @@ function tokenForPassword(password: string) {
   return createHash("sha256").update(`karen:${password}`).digest("hex");
 }
 
+export function safeEqualString(left: string, right: string) {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
 export function isEditorConfigured() {
   return Boolean(process.env.ADMIN_PASSWORD);
 }
@@ -17,11 +24,7 @@ export async function isEditor() {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE)?.value;
   if (!token) return false;
-  const expected = tokenForPassword(password);
-  const a = Buffer.from(token);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
+  return safeEqualString(token, tokenForPassword(password));
 }
 
 export async function requireEditor() {
@@ -36,9 +39,7 @@ export async function setEditorCookie(password: string) {
     throw new Error("ADMIN_PASSWORD is not set");
   }
   const submitted = password.trim();
-  const a = Buffer.from(submitted);
-  const b = Buffer.from(expected);
-  const ok = a.length === b.length && timingSafeEqual(a, b);
+  const ok = safeEqualString(submitted, expected);
   if (!ok) {
     return false;
   }

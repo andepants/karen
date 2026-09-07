@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeEqualString } from "@/lib/auth";
 import { ensureSchema } from "@/lib/ensure-schema";
 import { seedTestSets } from "@/lib/seed";
 
@@ -7,7 +8,7 @@ function authorized(request: Request) {
   if (!expected) return false;
   const header = request.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  return token === expected;
+  return safeEqualString(token, expected);
 }
 
 export async function POST(request: Request) {

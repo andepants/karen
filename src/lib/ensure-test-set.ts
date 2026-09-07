@@ -1,11 +1,11 @@
 import { DEFAULT_SET_SLUG } from "./seed-data";
 import { ensureSchema } from "./ensure-schema";
-import { seedTestSets } from "./seed";
+import { ensureSeededSets } from "./seed";
 import { getSetBySlug } from "./sets";
 
 export async function ensureTestSets() {
   await ensureSchema();
-  await seedTestSets();
+  await ensureSeededSets();
 }
 
 export async function ensureDefaultSet() {

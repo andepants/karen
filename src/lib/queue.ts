@@ -164,6 +164,14 @@ export async function dueCount(options: { setId?: string; now?: Date } = {}) {
   return (await dueQueue(options)).length;
 }
 
+export async function isDueCard(
+  cardId: string,
+  options: { setId?: string; now?: Date } = {},
+) {
+  const queue = await dueQueue(options);
+  return queue.some((item) => item.card.id === cardId);
+}
+
 export async function studyCounts(options: { setId?: string; now?: Date } = {}) {
   const queue = await dueQueue(options);
   const now = options.now ?? new Date();

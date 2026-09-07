@@ -24,6 +24,15 @@ export function portraitFileName(name: string) {
     .replace(/^-+|-+$/g, "")}.svg`;
 }
 
+function escapeXml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
 export function portraitSvg(name: string) {
   const hash = hashSeed(name);
   const skin = pick(skins, hash, 1);
@@ -52,7 +61,7 @@ export function portraitSvg(name: string) {
             : "M86 84 C96 36 186 34 196 86 C168 58 114 58 86 84Z";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 350" role="img" aria-label="${name}">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 350" role="img" aria-label="${escapeXml(name)}">
   <rect width="280" height="350" fill="${background}"/>
   <circle cx="140" cy="138" r="62" fill="${skin}"/>
   <path d="${hairPath}" fill="${hair}"/>
@@ -62,7 +71,7 @@ export function portraitSvg(name: string) {
   ${glasses ? `<path d="M96 136 H128 M152 136 H184" fill="none" stroke="#2b2118" stroke-width="3"/><circle cx="118" cy="136" r="16" fill="none" stroke="#2b2118" stroke-width="3"/><circle cx="162" cy="136" r="16" fill="none" stroke="#2b2118" stroke-width="3"/>` : ""}
   ${beard ? `<path d="M108 168 C118 198 162 198 172 168 C156 186 124 186 108 168Z" fill="${hair}" opacity="0.85"/>` : ""}
   <path d="M78 230 C88 196 192 196 202 230 C210 286 70 286 78 230Z" fill="${shirt}"/>
-  <text x="140" y="328" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#3d4a38">${initials}</text>
+  <text x="140" y="328" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#3d4a38">${escapeXml(initials)}</text>
 </svg>
 `;
 }

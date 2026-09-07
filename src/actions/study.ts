@@ -14,7 +14,12 @@ import {
   scheduler,
 } from "@/lib/fsrs";
 import { ensureSchema } from "@/lib/ensure-schema";
-import { nextUtcDay, studySnapshot, type StudySnapshot } from "@/lib/queue";
+import {
+  isDueCard,
+  nextUtcDay,
+  studySnapshot,
+  type StudySnapshot,
+} from "@/lib/queue";
 
 function refreshStudy() {
   revalidatePath("/study");
@@ -113,6 +118,10 @@ export async function rateCard(
   }
 
   const now = new Date();
+  const setIdForCard = await loadCardSetId(cardId);
+  if (!(await isDueCard(cardId, { setId: setIdForCard, now }))) {
+    return { error: "Card is not due." };
+  }
   const result = scheduler.next(rowToFsrs(row), now, rating);
   const next = fsrsToRow(result.card);
   const leech = next.lapses >= LEECH_THRESHOLD;
@@ -147,12 +156,19 @@ export async function rateCard(
   await burySiblings(row.personId, cardId, now);
   refreshStudy();
 
-  const setId = await loadCardSetId(cardId);
-  const snapshot = await studySnapshot({ setId, now, skipCardId: cardId });
+  const snapshot = await studySnapshot({
+    setId: setIdForCard,
+    now,
+    skipCardId: cardId,
+  });
   return { ok: true as const, leech, ...snapshot };
 }
 
 export async function undoLastReview(setId?: string) {
+  if (!setId) {
+    return { error: "Nothing to undo." };
+  }
+
   await ensureSchema();
   const db = getDb();
   const [log] = await db
@@ -160,7 +176,7 @@ export async function undoLastReview(setId?: string) {
     .from(reviewLogs)
     .innerJoin(cards, eq(cards.id, reviewLogs.cardId))
     .innerJoin(people, eq(people.id, cards.personId))
-    .where(setId ? eq(people.setId, setId) : undefined)
+    .where(eq(people.setId, setId))
     .orderBy(desc(reviewLogs.reviewedAt))
     .limit(1);
 
