@@ -222,7 +222,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border-radius: 2rem;
+  border-radius: 0;
   background: var(--card);
   box-shadow: 0 1px 2px oklch(0.28 0.04 145 / 0.06);
   backface-visibility: hidden;

@@ -143,21 +143,23 @@ export function StudyDeck({
 
   if (!item || session.cards >= sessionSize) {
     return (
-      <SessionRecap
-        setName={initial.set?.name ?? "Study"}
-        setId={initial.set?.id}
-        session={session}
-        people={people}
-        grades={grades}
-        profileSlug={initial.profileSlug}
-        pending={pending}
-        onStudyMore={() => {
-          if (!initial.set?.id) return;
-          setSession(emptySessionScore());
-          sampleRef.current = [];
-          run(() => studyMore(initial.set!.id, sessionSize));
-        }}
-      />
+      <div className="px-6">
+        <SessionRecap
+          setName={initial.set?.name ?? "Study"}
+          setId={initial.set?.id}
+          session={session}
+          people={people}
+          grades={grades}
+          profileSlug={initial.profileSlug}
+          pending={pending}
+          onStudyMore={() => {
+            if (!initial.set?.id) return;
+            setSession(emptySessionScore());
+            sampleRef.current = [];
+            run(() => studyMore(initial.set!.id, sessionSize));
+          }}
+        />
+      </div>
     );
   }
 
@@ -166,8 +168,8 @@ export function StudyDeck({
   const total = sessionSize;
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5 pb-28">
-      <div className="flex w-full items-center justify-between gap-3">
+    <div className="flex w-full flex-col items-center gap-5 pb-28">
+      <div className="flex w-full max-w-lg items-center justify-between gap-3 px-6">
         <div className="flex items-baseline gap-3">
           <p className="font-heading text-3xl tabular-nums">
             {current}
@@ -184,7 +186,7 @@ export function StudyDeck({
         />
       </div>
 
-      <div className="flashcard-scene w-full">
+      <div className="flashcard-scene w-full max-w-lg">
         <div
           role="button"
           tabIndex={0}
@@ -270,7 +272,7 @@ export function StudyDeck({
         </div>
       </div>
 
-      <div className="flex w-full flex-wrap justify-center gap-2">
+      <div className="flex w-full max-w-lg flex-wrap justify-center gap-2 px-6">
         <Button
           variant="outline"
           size="sm"
