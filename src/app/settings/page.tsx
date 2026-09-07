@@ -7,7 +7,7 @@ import { SyncTimeZone } from "@/components/sync-timezone";
 import { Button } from "@/components/ui/button";
 import { isEditor } from "@/lib/auth";
 import { ensureDefaultSet } from "@/lib/ensure-test-set";
-import { MEMORY_GRADES, memoryGrade, weakerGrade } from "@/lib/grades";
+import { emptyGradeCounts } from "@/lib/grades";
 import { progressStats } from "@/lib/progress";
 import { studyStats } from "@/lib/queue";
 import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
@@ -33,22 +33,7 @@ export default async function SettingsPage() {
         },
       )
     : null;
-  const gradeCounts = Object.fromEntries(MEMORY_GRADES.map((grade) => [grade, 0])) as Record<
-    string,
-    number
-  >;
-  if (stats) {
-    const byPerson = new Map<string, typeof stats.roster>();
-    for (const row of stats.roster) {
-      const current = byPerson.get(row.person.id) ?? [];
-      current.push(row);
-      byPerson.set(row.person.id, current);
-    }
-    for (const rows of byPerson.values()) {
-      const letter = weakerGrade(...rows.map((row) => memoryGrade(row.card)));
-      if (letter !== "—") gradeCounts[letter] += 1;
-    }
-  }
+  const gradeCounts = stats?.grades ?? emptyGradeCounts();
 
   return (
     <main className="mx-auto max-w-2xl space-y-12 px-6 py-10">

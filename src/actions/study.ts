@@ -17,6 +17,7 @@ import { ensureSchema } from "@/lib/ensure-schema";
 import {
   isDueCard,
   nextUtcDay,
+  rosterGrades,
   studySnapshot,
   type StudySnapshot,
 } from "@/lib/queue";
@@ -299,7 +300,10 @@ export async function getStudyRecap(setId?: string) {
   if (!setId) return { error: "No deck." };
   await ensureSchema();
   const prefs = await getStudyPrefs();
-  const progress = await progressStats(setId, { timeZone: prefs.timeZone });
+  const [progress, grades] = await Promise.all([
+    progressStats(setId, { timeZone: prefs.timeZone }),
+    rosterGrades(setId),
+  ]);
   const todayRated =
     progress.today.again +
     progress.today.hard +
@@ -307,9 +311,9 @@ export async function getStudyRecap(setId?: string) {
     progress.today.easy;
   return {
     ok: true as const,
+    people: grades.people,
+    grades: grades.counts,
     todayCount: progress.today.count,
-    todayNew: progress.today.newCount,
-    todayReview: progress.today.reviewCount,
     todayTime: formatStudyTime(progress.today.timeMs),
     todayRatings: {
       again: progress.today.again,

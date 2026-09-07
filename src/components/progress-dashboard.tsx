@@ -1,5 +1,6 @@
+import { GradeStrip } from "@/components/memory-grades";
 import { timeZoneLabel } from "@/lib/dates";
-import { gradeTone, MEMORY_GRADES } from "@/lib/grades";
+import type { GradeCounts } from "@/lib/grades";
 import type { ProgressSnapshot } from "@/lib/progress";
 
 export function ProgressDashboard({
@@ -14,7 +15,7 @@ export function ProgressDashboard({
   people: number;
   cards: number;
   bonus: number;
-  gradeCounts: Record<string, number>;
+  gradeCounts: GradeCounts;
 }) {
   const maxDay = Math.max(1, ...progress.days.map((day) => day.count));
   const ratingTotal =
@@ -165,12 +166,8 @@ export function ProgressDashboard({
         <p className="mt-1 text-sm text-muted-foreground">
           Grades fade as you forget. A is fresh. F needs work.
         </p>
-        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-          {MEMORY_GRADES.map((grade) => (
-            <p key={grade} className={`text-sm ${gradeTone(grade)}`}>
-              {grade} · {gradeCounts[grade]}
-            </p>
-          ))}
+        <div className="mt-4">
+          <GradeStrip people={people} counts={gradeCounts} />
         </div>
         {ratingTotal ? (
           <p className="mt-4 text-sm text-muted-foreground">

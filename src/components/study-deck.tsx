@@ -9,6 +9,7 @@ import {
   suspendCard,
   undoLastReview,
 } from "@/actions/study";
+import { GradeStrip } from "@/components/memory-grades";
 import { PersonFacts } from "@/components/person-facts";
 import { PromptToggle, type PromptSide } from "@/components/prompt-toggle";
 import {
@@ -16,6 +17,7 @@ import {
   addSessionRating,
   emptySessionScore,
 } from "@/components/session-recap";
+import { emptyGradeCounts } from "@/lib/grades";
 import { Rating } from "@/lib/fsrs";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_SESSION, roundSize } from "@/lib/session-limits";
@@ -33,16 +35,16 @@ const ratings = [
 function applySnapshot(
   snapshot: StudySnapshot,
   setItem: (value: StudySnapshot["item"]) => void,
-  setLeft: (value: number) => void,
-  setCounts: (value: StudySnapshot["counts"]) => void,
   setIntervals: (value: StudySnapshot["intervals"]) => void,
   setCanUndo: (value: boolean) => void,
+  setPeople: (value: number) => void,
+  setGrades: (value: StudySnapshot["grades"]) => void,
 ) {
   setItem(snapshot.item);
-  setLeft(snapshot.remaining);
-  setCounts(snapshot.counts);
   setIntervals(snapshot.intervals);
   setCanUndo(snapshot.canUndo);
+  setPeople(snapshot.people);
+  setGrades(snapshot.grades ?? emptyGradeCounts());
 }
 
 function readPrompt(): PromptSide {
@@ -57,10 +59,10 @@ export function StudyDeck({
 }) {
   const sessionSize = roundSize(initial.roundSize || DEFAULT_SESSION);
   const [item, setItem] = useState(initial.item);
-  const [left, setLeft] = useState(initial.remaining);
-  const [counts, setCounts] = useState(initial.counts);
   const [intervals, setIntervals] = useState(initial.intervals);
   const [canUndo, setCanUndo] = useState(initial.canUndo);
+  const [people, setPeople] = useState(initial.people);
+  const [grades, setGrades] = useState(initial.grades ?? emptyGradeCounts());
   const [flipped, setFlipped] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -126,7 +128,7 @@ export function StudyDeck({
       }
       setFlipped(false);
       setRevealed(false);
-      applySnapshot(result, setItem, setLeft, setCounts, setIntervals, setCanUndo);
+      applySnapshot(result, setItem, setIntervals, setCanUndo, setPeople, setGrades);
     });
   }
 
@@ -146,6 +148,8 @@ export function StudyDeck({
         setName={initial.set?.name ?? "Study"}
         setId={initial.set?.id}
         session={session}
+        people={people}
+        grades={grades}
         pending={pending}
         onStudyMore={() => {
           if (!initial.set?.id) return;
@@ -163,22 +167,11 @@ export function StudyDeck({
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5 pb-28">
-      <div className="flex w-full items-center justify-between text-sm">
-        <div className="flex gap-3 text-muted-foreground">
-          <span>
-            <em className="not-italic text-sky-700">{counts.new}</em> new
-          </span>
-          <span>
-            <em className="not-italic text-rose-700">{counts.learning}</em> learn
-          </span>
-          <span>
-            <em className="not-italic text-emerald-700">{counts.review}</em> review
-          </span>
-        </div>
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <span>{left} people due</span>
-          <span className="tabular-nums">{elapsed}s</span>
-        </div>
+      <div className="flex w-full items-start justify-between gap-3">
+        <GradeStrip people={people} counts={grades} />
+        <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+          {elapsed}s
+        </span>
       </div>
 
       <div className="flex w-full items-center justify-between gap-3">

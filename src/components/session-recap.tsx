@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getStudyRecap } from "@/actions/study";
+import { GradeStrip } from "@/components/memory-grades";
 import { Button } from "@/components/ui/button";
 import { formatStudyTime } from "@/lib/dates";
+import type { GradeCounts } from "@/lib/grades";
 
 export type SessionScore = {
   again: number;
@@ -49,18 +51,24 @@ export function SessionRecap({
   setName,
   setId,
   session,
+  people,
+  grades,
   pending,
   onStudyMore,
 }: {
   setName: string;
   setId?: string;
   session: SessionScore;
+  people: number;
+  grades: GradeCounts;
   pending: boolean;
   onStudyMore: () => void;
 }) {
   const [today, setToday] = useState<Awaited<ReturnType<typeof getStudyRecap>> | null>(
     null,
   );
+  const overallPeople = today && "ok" in today && today.ok ? today.people : people;
+  const overallGrades = today && "ok" in today && today.ok ? today.grades : grades;
 
   useEffect(() => {
     if (!setId) return;
@@ -88,9 +96,17 @@ export function SessionRecap({
         </p>
       </div>
 
+      <section className="space-y-3">
+        <h2 className="font-heading text-2xl">Overall</h2>
+        <p className="text-sm text-muted-foreground">
+          Letter grades for everyone in the roster. New means not graded yet.
+        </p>
+        <GradeStrip people={overallPeople} counts={overallGrades} />
+      </section>
+
       {session.cards ? (
         <section className="space-y-3">
-          <h2 className="font-heading text-2xl">This set</h2>
+          <h2 className="font-heading text-2xl">This session</h2>
           <p className="text-sm text-muted-foreground">
             {session.cards} {session.cards === 1 ? "card" : "cards"} ·{" "}
             {formatStudyTime(session.timeMs)}
@@ -112,7 +128,7 @@ export function SessionRecap({
           <>
             <p className="text-sm text-muted-foreground">
               {today.todayCount} {today.todayCount === 1 ? "card" : "cards"} ·{" "}
-              {today.todayNew} new · {today.todayReview} review · {today.todayTime}
+              {today.todayTime}
             </p>
             <ScoreRow
               again={today.todayRatings.again}

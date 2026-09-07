@@ -18,6 +18,41 @@ export function memoryGrade(card: CardRow, now = new Date()): MemoryGrade {
   return "A";
 }
 
+export type GradeCounts = Record<MemoryGrade, number>;
+
+export function emptyGradeCounts(): GradeCounts {
+  return {
+    A: 0,
+    B: 0,
+    C: 0,
+    D: 0,
+    E: 0,
+    F: 0,
+    "—": 0,
+  };
+}
+
+export function summarizePeopleGrades(
+  roster: { card: CardRow; person: { id: string } }[],
+  now = new Date(),
+) {
+  const byPerson = new Map<string, CardRow[]>();
+  for (const row of roster) {
+    const list = byPerson.get(row.person.id) ?? [];
+    list.push(row.card);
+    byPerson.set(row.person.id, list);
+  }
+  const counts = emptyGradeCounts();
+  for (const personCards of byPerson.values()) {
+    const letter = weakerGrade(...personCards.map((card) => memoryGrade(card, now)));
+    counts[letter] += 1;
+  }
+  return {
+    people: byPerson.size,
+    counts,
+  };
+}
+
 export function weakerGrade(...grades: MemoryGrade[]): MemoryGrade {
   const studied = grades.filter((grade) => grade !== "—");
   if (!studied.length) return "—";

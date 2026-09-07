@@ -8,6 +8,7 @@ import {
   previewIntervals,
   type CardRow,
 } from "./fsrs";
+import { emptyGradeCounts, summarizePeopleGrades, type GradeCounts } from "./grades";
 import { getStudyPrefs } from "./session-prefs";
 import { roundSize } from "./session-limits";
 import {
@@ -39,6 +40,8 @@ export type StudySnapshot = {
   set: Pick<SetRow, "id" | "slug" | "name" | "description"> | null;
   samplePersonIds: string[];
   roundSize: number;
+  people: number;
+  grades: GradeCounts;
 };
 
 export function startOfUtcDay(now = new Date()) {
@@ -288,6 +291,28 @@ export async function canUndoLast(setId?: string) {
   return Boolean(row);
 }
 
+export async function rosterGrades(setId?: string, now = new Date()) {
+  if (!setId) return { people: 0, counts: emptyGradeCounts() };
+  const db = getDb();
+  const [roster, personRows] = await Promise.all([
+    db
+      .select({ card: cards, person: people })
+      .from(cards)
+      .innerJoin(people, eq(people.id, cards.personId))
+      .where(and(eq(people.setId, setId), eq(people.archived, false))),
+    db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.setId, setId), eq(people.archived, false))),
+  ]);
+  const summary = summarizePeopleGrades(roster, now);
+  const peopleCount = personRows.length;
+  if (peopleCount > summary.people) {
+    summary.counts["—"] += peopleCount - summary.people;
+  }
+  return { people: peopleCount, counts: summary.counts };
+}
+
 function uniquePersonIds(queue: { person: { id: string } }[]) {
   const ids: string[] = [];
   const seen = new Set<string>();
@@ -357,7 +382,10 @@ export async function studySnapshot(options: {
       }
       return true;
     }) ?? null;
-  const counts = await studyCounts({ setId: options.setId, now });
+  const [counts, grades] = await Promise.all([
+    studyCounts({ setId: options.setId, now }),
+    rosterGrades(options.setId, now),
+  ]);
   let set: StudySnapshot["set"] = null;
   if (options.setId) {
     const db = getDb();
@@ -382,6 +410,8 @@ export async function studySnapshot(options: {
     set,
     samplePersonIds,
     roundSize: currentRound,
+    people: grades.people,
+    grades: grades.counts,
   };
 }
 
@@ -407,12 +437,15 @@ export async function studyStats(setId: string, now = new Date()) {
     }
   }
 
+  const grades = await rosterGrades(setId, now);
+
   return {
     prefs,
     usage,
     counts,
     remaining,
-    people: new Set(roster.map((row) => row.person.id)).size,
+    people: grades.people,
+    grades: grades.counts,
     cards: roster.length,
     roster,
     turnedOff: [...turnedOff.values()].sort((a, b) => a.name.localeCompare(b.name)),
