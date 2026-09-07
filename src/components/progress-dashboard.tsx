@@ -3,6 +3,8 @@ import { timeZoneLabel } from "@/lib/dates";
 import type { GradeCounts } from "@/lib/grades";
 import type { ProgressSnapshot } from "@/lib/progress";
 
+const PLOT_HEIGHT = 160;
+
 export function ProgressDashboard({
   progress,
   remaining,
@@ -64,26 +66,33 @@ export function ProgressDashboard({
           ) : null}
         </div>
 
-        <ol className="mt-6 flex h-40 items-end gap-1.5">
+        <ol className="mt-6 flex items-end gap-1.5" aria-label="Cards finished each day">
           {progress.days.map((day) => {
-            const height = day.count ? Math.max(8, (day.count / maxDay) * 100) : 3;
+            const barHeight = day.count
+              ? Math.max(10, Math.round((day.count / maxDay) * PLOT_HEIGHT))
+              : 4;
             return (
               <li key={day.date} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-                <span className="text-[10px] tabular-nums text-muted-foreground">
+                <span className="h-4 text-[10px] tabular-nums text-muted-foreground">
                   {day.count || ""}
                 </span>
                 <div
-                  className={`w-full rounded-t-md ${
-                    day.isToday
-                      ? "bg-primary"
-                      : day.count
-                        ? "bg-primary/55"
-                        : "bg-border"
-                  }`}
-                  style={{ height: `${height}%` }}
-                  title={`${day.fullLabel}: ${day.count} cards`}
-                  aria-label={`${day.fullLabel}, ${day.count} cards`}
-                />
+                  className="flex w-full items-end justify-center border-b border-border/80"
+                  style={{ height: PLOT_HEIGHT }}
+                >
+                  <div
+                    className={`w-full max-w-7 rounded-t-md ${
+                      day.isToday
+                        ? "bg-primary"
+                        : day.count
+                          ? "bg-primary/55"
+                          : "bg-border"
+                    }`}
+                    style={{ height: barHeight }}
+                    title={`${day.fullLabel}: ${day.count} cards`}
+                    aria-label={`${day.fullLabel}, ${day.count} cards`}
+                  />
+                </div>
                 <span
                   className={`text-[10px] tracking-wide uppercase ${
                     day.isToday ? "text-foreground" : "text-muted-foreground"
