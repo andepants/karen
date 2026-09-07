@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { unlockEditor } from "@/actions/auth";
 import { confirmImport } from "@/actions/import";
@@ -159,13 +160,18 @@ export function ImportForm({ isEditor }: { isEditor: boolean }) {
 
 export function UnlockForm() {
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   return (
     <form
       className="flex flex-col gap-2 sm:flex-row sm:items-end"
       action={async (formData) => {
         const result = await unlockEditor(formData);
-        if (result && "error" in result) setError(result.error ?? null);
+        if (result && "error" in result) {
+          setError(result.error ?? null);
+          return;
+        }
+        router.refresh();
       }}
     >
       <div className="space-y-2">

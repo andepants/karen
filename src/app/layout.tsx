@@ -21,6 +21,8 @@ export const metadata: Metadata = {
   description: "Import a website of people and study their faces with spaced repetition.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({
   children,
 }: LayoutProps<"/">) {

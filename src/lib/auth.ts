@@ -12,7 +12,7 @@ export function isEditorConfigured() {
 }
 
 export async function isEditor() {
-  const password = process.env.ADMIN_PASSWORD;
+  const password = process.env.ADMIN_PASSWORD?.trim();
   if (!password) return false;
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE)?.value;
@@ -31,14 +31,14 @@ export async function requireEditor() {
 }
 
 export async function setEditorCookie(password: string) {
-  const expected = process.env.ADMIN_PASSWORD;
+  const expected = process.env.ADMIN_PASSWORD?.trim();
   if (!expected) {
     throw new Error("ADMIN_PASSWORD is not set");
   }
-  const a = Buffer.from(password);
+  const submitted = password.trim();
+  const a = Buffer.from(submitted);
   const b = Buffer.from(expected);
-  const ok =
-    a.length === b.length && timingSafeEqual(a, b);
+  const ok = a.length === b.length && timingSafeEqual(a, b);
   if (!ok) {
     return false;
   }
