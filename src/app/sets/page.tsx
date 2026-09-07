@@ -1,9 +1,11 @@
 import { SetList } from "@/components/set-list";
+import { ensureTestSets } from "@/lib/ensure-test-set";
 import { listSetSummaries } from "@/lib/queue";
 
 export default async function SetsPage() {
   let summaries: Awaited<ReturnType<typeof listSetSummaries>> = [];
   try {
+    await ensureTestSets();
     summaries = await listSetSummaries();
   } catch {
     summaries = [];

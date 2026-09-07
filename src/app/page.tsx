@@ -3,12 +3,12 @@ import { LilyGarden } from "@/components/lily-garden";
 import { ImportForm, UnlockForm } from "@/components/import-form";
 import { Button } from "@/components/ui/button";
 import { isEditor } from "@/lib/auth";
+import { ensureTestSet } from "@/lib/ensure-test-set";
 import { GARDEN_TEST_SLUG } from "@/lib/seed-data";
-import { getSetBySlug } from "@/lib/sets";
 
 export default async function HomePage() {
   const editor = await isEditor();
-  const garden = await getSetBySlug(GARDEN_TEST_SLUG).catch(() => null);
+  const garden = await ensureTestSet(GARDEN_TEST_SLUG).catch(() => null);
 
   return (
     <main className="relative overflow-hidden px-6 pb-40 pt-8 md:pt-16">

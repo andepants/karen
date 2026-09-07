@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { StudyDeck } from "@/components/study-deck";
+import { ensureTestSet } from "@/lib/ensure-test-set";
 import { studySnapshot } from "@/lib/queue";
-import { getSetBySlug } from "@/lib/sets";
 
 export default async function StudySetPage({
   params,
@@ -9,7 +9,7 @@ export default async function StudySetPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const set = await getSetBySlug(slug).catch(() => null);
+  const set = await ensureTestSet(slug).catch(() => null);
   if (!set) notFound();
 
   const initial = await studySnapshot({ setId: set.id });

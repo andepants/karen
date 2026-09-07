@@ -3,7 +3,7 @@ import { getDb } from "@/db";
 import { cards, people, sets } from "@/db/schema";
 import { cardInsertValues } from "./fsrs";
 import { normalizeName } from "./names";
-import { portraitFileName } from "./portraits";
+import { portraitSvg } from "./portraits";
 import { seedSets } from "./seed-data";
 
 export async function seedTestSets() {
@@ -49,7 +49,7 @@ export async function seedTestSets() {
         .where(eq(people.normalizedName, normalizedName))
         .limit(1);
 
-      const photoUrl = `/portraits/${portraitFileName(person.name)}`;
+      const photoUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(portraitSvg(person.name))}`;
       let personId = existing?.id;
 
       if (existing) {

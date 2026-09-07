@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { DeckOverview } from "@/components/deck-overview";
+import { ensureTestSet } from "@/lib/ensure-test-set";
 import { dueCount, studyCounts } from "@/lib/queue";
-import { getSetBySlug } from "@/lib/sets";
 
 export default async function SetPage({
   params,
@@ -9,7 +9,7 @@ export default async function SetPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const set = await getSetBySlug(slug).catch(() => null);
+  const set = await ensureTestSet(slug).catch(() => null);
   if (!set) notFound();
 
   const [counts, remaining] = await Promise.all([
