@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { createStudyProfile } from "@/actions/profiles";
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { profileHref } from "@/lib/profile-path";
+import { profileHref, replaceProfileInPath } from "@/lib/profile-path";
 
 export function ProfileSwitcher({
   profiles,
@@ -28,6 +28,7 @@ export function ProfileSwitcher({
   shareOrigin?: string;
 }) {
   const router = useRouter();
+  const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export function ProfileSwitcher({
           return (
             <Link
               key={profile.slug}
-              href={profileHref(profile.slug)}
+              href={replaceProfileInPath(pathname, profile.slug)}
               aria-current={selected ? "page" : undefined}
               className={`rounded-full px-3 py-1.5 text-sm ring-1 transition-colors ${
                 selected

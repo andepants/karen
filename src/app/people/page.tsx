@@ -12,10 +12,13 @@ import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 import { getSetBySlug } from "@/lib/sets";
 
 export default async function PeoplePage({
+  params,
   searchParams,
 }: {
+  params?: Promise<{ profile?: string }>;
   searchParams: Promise<{ set?: string }>;
 }) {
+  const routeSlug = params ? (await params).profile : undefined;
   const editor = await isEditor();
   const { set: setSlug } = await searchParams;
   const selected = setSlug ? await getSetBySlug(setSlug).catch(() => null) : null;
@@ -26,7 +29,7 @@ export default async function PeoplePage({
   let profileSlug = "karen";
   try {
     await ensureTestSets();
-    const profile = await getActiveProfile();
+    const profile = await getActiveProfile(routeSlug);
     profileSlug = profile.slug;
     const db = getDb();
     allSets = await db.select().from(sets).orderBy(asc(sets.name));

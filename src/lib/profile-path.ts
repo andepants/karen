@@ -21,10 +21,41 @@ export const RESERVED_PROFILE_SLUGS = new Set([
   "study",
 ]);
 
+export const PATHNAME_HEADER = "x-pathname";
+
 export function profileHref(slug: string, path = "/") {
   const prefix = `/p/${slug}`;
   if (!path || path === "/") return prefix;
   return `${prefix}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function profileSlugFromPathname(pathname: string) {
+  const match = pathname.match(/^\/p\/([a-z0-9][a-z0-9-]{0,31})(?:\/|$)/i);
+  if (!match?.[1]) return null;
+  const slug = match[1].toLowerCase();
+  return isValidProfileSlug(slug) ? slug : null;
+}
+
+export function pathWithoutProfile(pathname: string) {
+  if (!pathname.startsWith("/p/")) return pathname || "/";
+  const rest = pathname.replace(/^\/p\/[^/]+/, "");
+  return rest || "/";
+}
+
+export function replaceProfileInPath(pathname: string, slug: string) {
+  return profileHref(slug, pathWithoutProfile(pathname));
+}
+
+export function isUnscopedAppPath(pathname: string) {
+  return (
+    pathname === "/" ||
+    pathname === "/settings" ||
+    pathname.startsWith("/settings/") ||
+    pathname === "/people" ||
+    pathname.startsWith("/people/") ||
+    pathname === "/study" ||
+    pathname.startsWith("/study/")
+  );
 }
 
 export function slugFromName(name: string) {

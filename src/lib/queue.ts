@@ -9,7 +9,7 @@ import {
   type CardRow,
 } from "./fsrs";
 import { emptyGradeCounts, summarizePeopleGrades, type GradeCounts } from "./grades";
-import { getActiveProfile } from "./profiles";
+import { getActiveProfile, resolveProfile } from "./profiles";
 import { getStudyPrefs } from "./session-prefs";
 import { roundSize } from "./session-limits";
 import {
@@ -58,8 +58,9 @@ export function nextUtcDay(now = new Date()) {
   return new Date(startOfUtcDay(now).getTime() + 86_400_000);
 }
 
-async function resolveProfileId(profileId?: string) {
+async function resolveProfileId(profileId?: string, profileSlug?: string) {
   if (profileId) return profileId;
+  if (profileSlug) return (await resolveProfile(profileSlug)).id;
   const profile = await getActiveProfile();
   return profile.id;
 }
@@ -435,9 +436,12 @@ export async function studySnapshot(options: {
   skipPersonId?: string;
   samplePersonIds?: string[];
   persistSample?: boolean;
+  profileSlug?: string;
 } = {}): Promise<StudySnapshot> {
   const now = options.now ?? new Date();
-  const profile = await getActiveProfile();
+  const profile = options.profileSlug
+    ? await resolveProfile(options.profileSlug)
+    : await getActiveProfile();
   const prefs = await getStudyPrefs();
   const currentRound = roundSize(prefs.session);
   const openQueue = await dueQueue({

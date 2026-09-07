@@ -6,13 +6,16 @@ import { studySnapshot } from "@/lib/queue";
 export default async function StudySetPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string; profile?: string }>;
 }) {
-  const { slug } = await params;
+  const { slug, profile: routeSlug } = await params;
   const set = await ensureTestSet(slug).catch(() => null);
   if (!set) notFound();
 
-  const initial = await studySnapshot({ setId: set.id });
+  const initial = await studySnapshot({
+    setId: set.id,
+    profileSlug: routeSlug,
+  });
 
   return (
     <main className="py-6 sm:px-6 sm:py-10">

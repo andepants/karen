@@ -7,6 +7,7 @@ import { GradeStrip } from "@/components/memory-grades";
 import { Button } from "@/components/ui/button";
 import { formatStudyTime } from "@/lib/dates";
 import type { GradeCounts } from "@/lib/grades";
+import { useProfile } from "@/components/profile-context";
 import { DEFAULT_PROFILE_SLUG, profileHref } from "@/lib/profile-path";
 
 export type SessionScore = {
@@ -67,6 +68,8 @@ export function SessionRecap({
   onStudyMore: () => void;
   profileSlug?: string;
 }) {
+  const active = useProfile();
+  const slug = active.slug || profileSlug;
   const [today, setToday] = useState<Awaited<ReturnType<typeof getStudyRecap>> | null>(
     null,
   );
@@ -156,7 +159,7 @@ export function SessionRecap({
           </Button>
         ) : null}
         <Button variant="outline" asChild>
-          <Link href={profileHref(profileSlug, "/settings")}>Options</Link>
+          <Link href={profileHref(slug, "/settings")}>Options</Link>
         </Button>
       </div>
     </div>

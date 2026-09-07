@@ -4,20 +4,20 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { lockEditor } from "@/actions/auth";
+import { useProfile } from "@/components/profile-context";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_PROFILE_SLUG, profileHref } from "@/lib/profile-path";
 import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 import { LilyMark } from "./lily-garden";
 
 export function SiteHeader({
   isEditor,
   dueCount,
-  profileSlug = DEFAULT_PROFILE_SLUG,
 }: {
   isEditor: boolean;
   dueCount: number;
   profileSlug?: string;
 }) {
+  const profile = useProfile();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +40,7 @@ export function SiteHeader({
 
   return (
     <header className="relative z-20 flex items-center justify-between gap-4 px-6 py-5">
-      <Link href={profileHref(profileSlug)} className="flex items-center gap-2">
+      <Link href={profile.href()} className="flex items-center gap-2">
         <LilyMark className="h-10 w-8" />
         <span className="font-heading text-xl tracking-wide text-foreground">
           Karen&apos;s Flashcards
@@ -60,7 +60,7 @@ export function SiteHeader({
         {open ? (
           <nav className="absolute right-0 top-12 z-40 flex w-56 flex-col rounded-2xl bg-card p-2 shadow-lg ring-1 ring-border">
             <Link
-              href={profileHref(profileSlug, `/study/${DEFAULT_SET_SLUG}`)}
+              href={profile.href(`/study/${DEFAULT_SET_SLUG}`)}
               className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
               onClick={() => setOpen(false)}
             >
@@ -72,14 +72,14 @@ export function SiteHeader({
               ) : null}
             </Link>
             <Link
-              href={profileHref(profileSlug, "/people")}
+              href={profile.href("/people")}
               className="rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
               onClick={() => setOpen(false)}
             >
               Roster
             </Link>
             <Link
-              href={profileHref(profileSlug, "/settings")}
+              href={profile.href("/settings")}
               className="rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
               onClick={() => setOpen(false)}
             >

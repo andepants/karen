@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Cormorant_Garamond, Figtree } from "next/font/google";
-import { SiteHeader } from "@/components/site-header";
-import { isEditor } from "@/lib/auth";
-import { ensureDefaultSet } from "@/lib/ensure-test-set";
+import { ProfileProvider } from "@/components/profile-context";
 import { getActiveProfile } from "@/lib/profiles";
-import { dueCount } from "@/lib/queue";
 import "./globals.css";
 
 const serif = Cormorant_Garamond({
@@ -31,17 +28,11 @@ export default async function RootLayout({
 }: {
   children: ReactNode;
 }) {
-  let editor = false;
-  let due = 0;
-  let profileSlug = "karen";
+  let initialSlug = "karen";
   try {
-    editor = await isEditor();
-    const deck = await ensureDefaultSet();
-    const profile = await getActiveProfile();
-    profileSlug = profile.slug;
-    due = await dueCount({ setId: deck?.id, profileId: profile.id });
+    initialSlug = (await getActiveProfile()).slug;
   } catch {
-    editor = await isEditor().catch(() => false);
+    initialSlug = "karen";
   }
 
   return (
@@ -50,8 +41,9 @@ export default async function RootLayout({
       className={`${serif.variable} ${sans.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <SiteHeader isEditor={editor} dueCount={due} profileSlug={profileSlug} />
-        <div className="flex-1">{children}</div>
+        <ProfileProvider initialSlug={initialSlug}>
+          <div className="flex-1">{children}</div>
+        </ProfileProvider>
       </body>
     </html>
   );

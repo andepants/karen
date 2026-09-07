@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
+import { cache } from "react";
 import { getDb } from "@/db";
 import { cards, people, profiles } from "@/db/schema";
 import { cardInsertValues } from "./fsrs";
@@ -7,9 +8,11 @@ import {
   DEFAULT_PROFILE_NAME,
   DEFAULT_PROFILE_SLUG,
   NUMBERED_PROFILE_MAX,
+  PATHNAME_HEADER,
   PROFILE_COOKIE,
   PROFILE_HEADER,
   isNumberedProfileSlug,
+  profileSlugFromPathname,
   isValidProfileSlug,
   slugFromName,
 } from "./profile-path";
@@ -23,6 +26,8 @@ export {
   NUMBERED_PROFILE_MAX,
   isValidProfileSlug,
   profileHref,
+  profileSlugFromPathname,
+  replaceProfileInPath,
 } from "./profile-path";
 
 async function prunePresetProfiles() {
@@ -69,6 +74,10 @@ function compareProfiles(left: ProfileRow, right: ProfileRow) {
 
 export async function readRequestedProfileSlug() {
   const headerStore = await headers();
+  const fromPath = profileSlugFromPathname(
+    headerStore.get(PATHNAME_HEADER) || headerStore.get("x-url") || "",
+  );
+  if (fromPath) return fromPath;
   const fromHeader = headerStore.get(PROFILE_HEADER)?.trim().toLowerCase();
   if (fromHeader && isValidProfileSlug(fromHeader)) return fromHeader;
   const store = await cookies();
@@ -101,9 +110,12 @@ export async function resolveProfile(slug = DEFAULT_PROFILE_SLUG) {
   return getProfileBySlug(DEFAULT_PROFILE_SLUG).then((row) => row!);
 }
 
-export async function getActiveProfile() {
-  return resolveProfile(await readRequestedProfileSlug());
-}
+export const getActiveProfile = cache(async (explicitSlug?: string) => {
+  const slug = explicitSlug?.trim().toLowerCase();
+  return resolveProfile(
+    slug && isValidProfileSlug(slug) ? slug : await readRequestedProfileSlug(),
+  );
+});
 
 export async function createNamedProfile(rawName: string) {
   await ensureBuiltinProfiles();

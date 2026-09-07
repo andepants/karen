@@ -23,14 +23,19 @@ async function shareOrigin() {
   return host ? `${proto}://${host}` : undefined;
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  params,
+}: {
+  params?: Promise<{ profile?: string }>;
+}) {
+  const routeSlug = params ? (await params).profile : undefined;
   const editor = await isEditor();
   const deck = await ensureDefaultSet().catch((error) => {
     console.error("settings deck", error);
     return null;
   });
   const [activeProfile, allProfiles] = await Promise.all([
-    getActiveProfile(),
+    getActiveProfile(routeSlug),
     listProfiles(),
   ]);
   const stats = deck

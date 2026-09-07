@@ -11,6 +11,7 @@ import { clearSessionSample } from "@/lib/session-sample";
 function refreshSettings() {
   revalidatePath("/settings");
   revalidatePath("/study");
+  revalidatePath("/p", "layout");
   revalidatePath("/");
 }
 
