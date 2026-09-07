@@ -141,20 +141,19 @@ export function StudyDeck({
   if (!item) {
     return (
       <div className="mx-auto max-w-lg rounded-3xl bg-card/80 px-8 py-16 text-center shadow-sm">
-        <p className="text-sm tracking-[0.25em] text-primary uppercase">
+        <p className="text-sm text-muted-foreground">
           {initial.set?.name ?? "Study"}
         </p>
-        <h1 className="mt-3 font-heading text-4xl">Congratulations</h1>
+        <h1 className="mt-3 font-heading text-4xl">You&apos;re all caught up.</h1>
         <p className="mt-3 text-muted-foreground">
-          You have finished this set for now. Buried siblings will return
-          tomorrow, the same way Anki waits until the next day.
+          Come back tomorrow for more cards.
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <Button asChild>
-            <Link href={overviewHref}>Deck overview</Link>
+            <Link href={overviewHref}>Done</Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/sets">All sets</Link>
+            <Link href="/sets">Decks</Link>
           </Button>
         </div>
       </div>
@@ -187,12 +186,12 @@ export function StudyDeck({
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">{stateLabel(item.card.state)}</Badge>
           <Badge variant="secondary">
-            {isNameCard ? "Name → face" : "Face → name"}
+            {isNameCard ? "Name" : "Photo"}
           </Badge>
-          {item.card.leech ? <Badge variant="destructive">Leech</Badge> : null}
+          {item.card.leech ? <Badge variant="destructive">Hard</Badge> : null}
         </div>
         <Button variant="ghost" size="sm" asChild>
-          <Link href={overviewHref}>Overview</Link>
+          <Link href={overviewHref}>Back</Link>
         </Button>
       </div>
 
@@ -207,16 +206,14 @@ export function StudyDeck({
         >
           {isNameCard && !flipped ? (
             <div className="flex aspect-[4/5] flex-col items-center justify-center bg-secondary px-6 text-center">
-              <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
-                Who is
-              </p>
+              <p className="text-sm text-muted-foreground">Name</p>
               <h1 className="mt-3 font-heading text-5xl">{item.person.name}</h1>
             </div>
           ) : item.person.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={item.person.photoUrl}
-              alt={flipped || isNameCard ? item.person.name : "Mystery person"}
+              alt={flipped || isNameCard ? item.person.name : "Person"}
               className="aspect-[4/5] w-full object-cover"
             />
           ) : (
@@ -229,12 +226,12 @@ export function StudyDeck({
               <>
                 <h1 className="font-heading text-4xl">{item.person.name}</h1>
                 <p className="mt-2 text-muted-foreground">
-                  {item.person.description || "No description yet"}
+                  {item.person.description || ""}
                 </p>
               </>
             ) : (
               <p className="font-heading text-2xl text-muted-foreground">
-                {isNameCard ? "Picture the face. Space to reveal." : "Who is this? Space to reveal."}
+                {isNameCard ? "What do they look like?" : "What is their name?"}
               </p>
             )}
           </div>
@@ -279,7 +276,7 @@ export function StudyDeck({
           disabled={pending}
           onClick={() => run(() => buryCard(item.card.id, "card"))}
         >
-          Bury
+          Skip
         </Button>
         <Button
           variant="outline"
@@ -287,7 +284,7 @@ export function StudyDeck({
           disabled={pending}
           onClick={() => run(() => buryCard(item.card.id, "note"))}
         >
-          Bury note
+          Skip Both
         </Button>
         <Button
           variant="outline"
@@ -295,17 +292,16 @@ export function StudyDeck({
           disabled={pending}
           onClick={() => run(() => suspendCard(item.card.id, "card"))}
         >
-          Suspend
+          Turn Off
         </Button>
       </div>
 
       <p className="max-w-md text-center text-xs text-muted-foreground">
-        Space or Enter shows the answer, then Good. 1 Again · 2 Hard · 3 Good · 4
-        Easy. - bury card · = bury note · @ suspend · Ctrl/⌘Z undo.
+        Space to flip. 1–4 to rate.
       </p>
       {leechNote ? (
-        <p className="text-sm text-destructive">
-          Leech: this card has lapsed 8 times, same as Anki’s default threshold.
+        <p className="text-sm text-muted-foreground">
+          This card is taking longer to learn.
         </p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}

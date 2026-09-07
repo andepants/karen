@@ -10,7 +10,7 @@ export function SetList({
   if (!summaries.length) {
     return (
       <p className="text-muted-foreground">
-        No sets yet. Import a team page or seed the garden test roster.
+        No decks yet.
       </p>
     );
   }
@@ -32,7 +32,7 @@ export function SetList({
               <span className="text-rose-700">{counts.learning} learn</span>
               <span className="text-emerald-700">{counts.review} review</span>
               {counts.buried ? (
-                <span className="text-muted-foreground">{counts.buried} buried</span>
+                <span className="text-muted-foreground">{counts.buried} skipped</span>
               ) : null}
             </p>
           </div>
@@ -43,7 +43,7 @@ export function SetList({
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={`/sets/${set.slug}`}>Overview</Link>
+              <Link href={`/sets/${set.slug}`}>Details</Link>
             </Button>
           </div>
         </article>

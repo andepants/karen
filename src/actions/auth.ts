@@ -7,7 +7,7 @@ export async function unlockEditor(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const ok = await setEditorCookie(password);
   if (!ok) {
-    return { error: "That passcode does not match." };
+    return { error: "Incorrect password." };
   }
   revalidatePath("/");
   revalidatePath("/people");

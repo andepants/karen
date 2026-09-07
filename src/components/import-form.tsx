@@ -44,7 +44,7 @@ export function ImportForm({ isEditor }: { isEditor: boolean }) {
         people?: ExtractedPerson[];
       };
       if (!response.ok) {
-        throw new Error(payload.error || "Could not read that page");
+        throw new Error(payload.error || "Couldn't open that page.");
       }
       setTitle(payload.title || "");
       const next = payload.people ?? [];
@@ -67,7 +67,7 @@ export function ImportForm({ isEditor }: { isEditor: boolean }) {
       return;
     }
     setSaved(
-      `Added ${result.created} people${result.skipped ? `, skipped ${result.skipped} duplicates` : ""}${result.slug ? ` into /study/${result.slug}` : ""}.`,
+      `Added ${result.created}${result.skipped ? `, skipped ${result.skipped}` : ""}.`,
     );
     setPeople([]);
   }
@@ -92,14 +92,14 @@ export function ImportForm({ isEditor }: { isEditor: boolean }) {
             checked={followProfiles}
             onCheckedChange={(value) => setFollowProfiles(value === true)}
           />
-          Also follow profile links on this site (slower, more complete)
+          Include linked profile pages
         </label>
         <Button type="submit" size="lg" disabled={loading || !isEditor} className="rounded-full px-6">
-          {loading ? "Reading the garden…" : "Gather people"}
+          {loading ? "Looking…" : "Import"}
         </Button>
         {!isEditor ? (
           <p className="text-sm text-muted-foreground">
-            Unlock with the editor passcode to import.
+            Enter the password to import.
           </p>
         ) : null}
       </form>
@@ -111,13 +111,13 @@ export function ImportForm({ isEditor }: { isEditor: boolean }) {
         <div className="space-y-4">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="font-heading text-2xl">{title || "Found people"}</p>
+              <p className="font-heading text-2xl">{title || "People"}</p>
               <p className="text-sm text-muted-foreground">
-                {selectedPeople.length} selected of {people.length}
+                {selectedPeople.length} of {people.length} selected
               </p>
             </div>
             <Button onClick={save} disabled={saving || selectedPeople.length === 0}>
-              {saving ? "Planting…" : "Add to roster"}
+              {saving ? "Adding…" : "Add"}
             </Button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -147,7 +147,7 @@ export function ImportForm({ isEditor }: { isEditor: boolean }) {
                   <div className="min-w-0">
                     <p className="truncate font-medium">{person.name}</p>
                     <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {person.description || "No description yet"}
+                        {person.description || ""}
                     </p>
                   </div>
                 </CardContent>
@@ -177,7 +177,7 @@ export function UnlockForm() {
       }}
     >
       <div className="space-y-2">
-        <Label htmlFor="password">Editor passcode</Label>
+        <Label htmlFor="password">Password</Label>
         <Input
           id="password"
           name="password"
@@ -187,7 +187,7 @@ export function UnlockForm() {
         />
       </div>
       <Button type="submit" variant="secondary">
-        Unlock
+        Continue
       </Button>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </form>

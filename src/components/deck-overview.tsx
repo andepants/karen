@@ -23,8 +23,7 @@ export function DeckOverview({
   return (
     <div className="mx-auto max-w-xl space-y-8">
       <div>
-        <p className="text-sm tracking-[0.25em] text-primary uppercase">Set</p>
-        <h1 className="mt-2 font-heading text-5xl">{set.name}</h1>
+        <h1 className="font-heading text-5xl">{set.name}</h1>
         <p className="mt-3 text-muted-foreground">{set.description}</p>
       </div>
 
@@ -37,7 +36,7 @@ export function DeckOverview({
       <div className="flex flex-wrap gap-3">
         <Button size="lg" className="rounded-full px-6" asChild>
           <Link href={shareUrl}>
-            {remaining ? `Study now · ${remaining}` : "Study now"}
+            {remaining ? `Study · ${remaining}` : "Study"}
           </Link>
         </Button>
         <Button variant="outline" asChild>
@@ -54,13 +53,13 @@ export function DeckOverview({
               })
             }
           >
-            Unbury {buried}
+            Show Hidden · {buried}
           </Button>
         ) : null}
       </div>
 
       <p className="rounded-2xl bg-card/70 px-4 py-3 text-sm text-muted-foreground">
-        Share this set:{" "}
+        Link:{" "}
         <Link className="text-foreground underline-offset-4 hover:underline" href={shareUrl}>
           {shareUrl}
         </Link>

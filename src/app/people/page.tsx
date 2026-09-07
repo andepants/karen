@@ -34,16 +34,15 @@ export default async function PeoplePage({
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="font-heading text-5xl">
-        {selected ? selected.name : "The roster"}
+        {selected ? selected.name : "People"}
       </h1>
       <p className="mt-2 max-w-xl text-muted-foreground">
-        Everyone planted in the garden. Each person has a face card and a name
-        card, like Anki&apos;s basic-and-reversed notes.
+        Names, photos, and notes.
       </p>
       <div className="mt-8">
         {roster.length === 0 && !editor ? (
           <p className="text-muted-foreground">
-            No people yet. Import a website from the home page.
+            No people yet.
           </p>
         ) : (
           <PeopleGrid people={roster} sets={allSets} isEditor={editor} />

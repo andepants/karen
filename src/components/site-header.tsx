@@ -20,7 +20,7 @@ export function SiteHeader({
       </Link>
       <nav className="flex items-center gap-1 sm:gap-2">
         <Button variant="ghost" asChild>
-          <Link href="/sets">Sets</Link>
+          <Link href="/sets">Decks</Link>
         </Button>
         <Button variant="ghost" asChild>
           <Link href="/people">People</Link>
@@ -38,7 +38,7 @@ export function SiteHeader({
         {isEditor ? (
           <form action={lockEditor}>
             <Button variant="outline" type="submit" size="sm">
-              Lock
+              Sign Out
             </Button>
           </form>
         ) : null}

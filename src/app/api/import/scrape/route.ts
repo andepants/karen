@@ -6,7 +6,7 @@ export const maxDuration = 60;
 
 export async function POST(request: Request) {
   if (!(await isEditor())) {
-    return NextResponse.json({ error: "Editor passcode required" }, { status: 401 });
+    return NextResponse.json({ error: "Password required." }, { status: 401 });
   }
 
   const body = (await request.json()) as {

@@ -13,9 +13,9 @@ export default async function StudyIndexPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="font-heading text-5xl">Choose a set</h1>
+      <h1 className="font-heading text-5xl">Study</h1>
       <p className="mt-2 max-w-xl text-muted-foreground">
-        Anki studies the selected deck only. Pick a set to open its due queue.
+        Pick a deck.
       </p>
       <div className="mt-8">
         <SetList summaries={summaries} />

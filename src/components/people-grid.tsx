@@ -51,7 +51,7 @@ function AddPersonCard({ sets }: { sets: SetRow[] }) {
   return (
     <Card className="border-dashed bg-card/60">
       <CardContent className="flex h-full min-h-48 flex-col justify-center p-5">
-        <p className="font-heading text-xl">Add someone</p>
+        <p className="font-heading text-xl">Add Person</p>
         <PersonForm sets={sets} />
       </CardContent>
     </Card>
@@ -85,7 +85,7 @@ function PersonCard({
         <div>
           <h2 className="font-heading text-2xl leading-tight">{person.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {person.description || "No description yet"}
+            {person.description || ""}
           </p>
         </div>
         {isEditor ? (

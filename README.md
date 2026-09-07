@@ -1,13 +1,11 @@
 # Karen
 
-Lily-themed flashcards. Paste a team page, then study faces with FSRS — the same scheduler family Anki uses.
+A simple flashcards app for names and faces.
 
-## Sets
+## Decks
 
-- Garden Test (20 people, face + name cards): `/study/garden-test`
-- Studio Neighbors (8 people, second deck): `/study/studio-neighbors`
-
-Study one set at a time. Each person is an Anki-style note with two cards: photo→name and name→photo.
+- Practice (20 people): `/study/garden-test`
+- Neighbors (8 people): `/study/studio-neighbors`
 
 ## Local
 

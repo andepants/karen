@@ -13,10 +13,9 @@ export default async function SetsPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="font-heading text-5xl">Sets</h1>
+      <h1 className="font-heading text-5xl">Decks</h1>
       <p className="mt-2 max-w-xl text-muted-foreground">
-        Study one deck at a time, the way Anki does. Each set has its own new
-        and review limits, plus front and reverse cards.
+        Choose a deck to study.
       </p>
       <div className="mt-8">
         <SetList summaries={summaries} />

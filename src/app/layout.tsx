@@ -18,8 +18,8 @@ const sans = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "Karen — lily flashcards",
-  description: "Import a website of people and study their faces with spaced repetition.",
+  title: "Karen",
+  description: "A simple flashcards app for names and faces.",
 };
 
 export const dynamic = "force-dynamic";

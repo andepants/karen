@@ -26,7 +26,7 @@ export async function isEditor() {
 
 export async function requireEditor() {
   if (!(await isEditor())) {
-    throw new Error("Editor passcode required");
+    throw new Error("Password required");
   }
 }
 
