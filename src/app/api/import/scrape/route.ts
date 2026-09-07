@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { isEditor } from "@/lib/auth";
 import { extractPeopleFromUrl } from "@/lib/firecrawl";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   if (!(await isEditor())) {
