@@ -39,7 +39,8 @@ yarn-error.log*
 
 # local tooling
 .codegraph/
-.cursor/
+.cursor/*
+!.cursor/environment.json
 
 # typescript
 *.tsbuildinfo

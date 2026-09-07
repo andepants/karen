@@ -1,0 +1,11 @@
+{
+  "name": "Karen's Flashcards",
+  "install": "npm ci",
+  "terminals": [
+    {
+      "name": "next-dev",
+      "command": "npm run dev"
+    }
+  ],
+  "ports": [3000]
+}
