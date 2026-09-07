@@ -1,13 +1,42 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
-import { cards, people, sets } from "@/db/schema";
+import { cards, people, reviewLogs, sets } from "@/db/schema";
 import { cardInsertValues } from "./fsrs";
 import { normalizeName } from "./names";
-import { portraitSvg } from "./portraits";
-import { seedSets } from "./seed-data";
+import { RETIRED_SET_SLUGS, seedSets } from "./seed-data";
+
+async function removeRetiredSets() {
+  const db = getDb();
+  const retired = await db
+    .select()
+    .from(sets)
+    .where(inArray(sets.slug, [...RETIRED_SET_SLUGS]));
+  if (!retired.length) return;
+
+  const setIds = retired.map((set) => set.id);
+  const roster = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(inArray(people.setId, setIds));
+  const personIds = roster.map((row) => row.id);
+  if (personIds.length) {
+    const cardRows = await db
+      .select({ id: cards.id })
+      .from(cards)
+      .where(inArray(cards.personId, personIds));
+    const cardIds = cardRows.map((row) => row.id);
+    if (cardIds.length) {
+      await db.delete(reviewLogs).where(inArray(reviewLogs.cardId, cardIds));
+      await db.delete(cards).where(inArray(cards.id, cardIds));
+    }
+    await db.delete(people).where(inArray(people.id, personIds));
+  }
+  await db.delete(sets).where(inArray(sets.id, setIds));
+}
 
 export async function seedTestSets() {
   const db = getDb();
+  await removeRetiredSets();
   const now = new Date();
   const created: { slug: string; name: string; people: number; cards: number }[] =
     [];
@@ -26,6 +55,7 @@ export async function seedTestSets() {
           slug: seed.slug,
           name: seed.name,
           description: seed.description,
+          newCardsPerDay: seed.newCardsPerDay ?? 20,
         })
         .returning();
     } else {
@@ -34,6 +64,7 @@ export async function seedTestSets() {
         .set({
           name: seed.name,
           description: seed.description,
+          newCardsPerDay: seed.newCardsPerDay ?? set.newCardsPerDay,
         })
         .where(eq(sets.id, set.id));
     }
@@ -49,7 +80,7 @@ export async function seedTestSets() {
         .where(eq(people.normalizedName, normalizedName))
         .limit(1);
 
-      const photoUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(portraitSvg(person.name))}`;
+      const photoUrl = person.photoUrl ?? existing?.photoUrl ?? null;
       let personId = existing?.id;
 
       if (existing) {
@@ -60,6 +91,7 @@ export async function seedTestSets() {
             name: person.name,
             description: person.description,
             photoUrl,
+            profileUrl: person.profileUrl ?? existing.profileUrl,
             archived: false,
             updatedAt: now,
           })
@@ -73,6 +105,7 @@ export async function seedTestSets() {
             normalizedName,
             description: person.description,
             photoUrl,
+            profileUrl: person.profileUrl ?? null,
           })
           .returning();
         personId = row.id;

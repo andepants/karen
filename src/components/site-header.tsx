@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { lockEditor } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 import { LilyMark } from "./lily-garden";
 
 export function SiteHeader({
@@ -26,7 +27,7 @@ export function SiteHeader({
           <Link href="/people">People</Link>
         </Button>
         <Button variant="ghost" asChild>
-          <Link href="/study" className="gap-1.5">
+          <Link href={`/study/${DEFAULT_SET_SLUG}`} className="gap-1.5">
             Study
             {dueCount > 0 ? (
               <span className="rounded-full bg-primary/15 px-1.5 text-xs text-primary">

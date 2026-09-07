@@ -76,7 +76,7 @@ function PersonCard({
           <img
             src={person.photoUrl}
             alt={person.name}
-            className="aspect-square w-full rounded-2xl object-cover"
+            className="aspect-square w-full rounded-2xl object-cover object-top"
           />
         ) : (
           <div className="flex aspect-square items-center justify-center rounded-2xl bg-secondary font-heading text-4xl text-muted-foreground">
@@ -85,7 +85,7 @@ function PersonCard({
         )}
         <div>
           <h2 className="font-heading text-2xl leading-tight">{person.name}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 line-clamp-4 text-sm text-muted-foreground">
             {person.description || ""}
           </p>
         </div>

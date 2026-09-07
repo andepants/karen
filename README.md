@@ -2,10 +2,11 @@
 
 A simple app for names and faces.
 
-## Decks
+## Deck
 
-- Practice (20 people): `/study/garden-test`
-- Neighbors (8 people): `/study/studio-neighbors`
+Austin Area OBGYN (40 providers): `/study/aaobgyn`
+
+Open the app and click Study.
 
 ## Local
 

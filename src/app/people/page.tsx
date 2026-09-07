@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { asc, desc, eq } from "drizzle-orm";
 import { PeopleGrid } from "@/components/people-grid";
+import { Button } from "@/components/ui/button";
 import { getDb } from "@/db";
 import { people, sets } from "@/db/schema";
 import { isEditor } from "@/lib/auth";
 import { ensureTestSets } from "@/lib/ensure-test-set";
+import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 import { getSetBySlug } from "@/lib/sets";
 
 export default async function PeoplePage({
@@ -35,12 +38,21 @@ export default async function PeoplePage({
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
-      <h1 className="font-heading text-5xl">
-        {selected ? selected.name : "People"}
-      </h1>
-      <p className="mt-2 max-w-xl text-muted-foreground">
-        Names, photos, and notes.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-5xl">
+            {selected ? selected.name : "People"}
+          </h1>
+          <p className="mt-2 max-w-xl text-muted-foreground">
+            Names, photos, and notes.
+          </p>
+        </div>
+        <Button size="lg" className="rounded-full px-8" asChild>
+          <Link href={`/study/${selected?.slug ?? DEFAULT_SET_SLUG}`}>
+            Study
+          </Link>
+        </Button>
+      </div>
       <div className="mt-8">
         {roster.length === 0 && !editor ? (
           <p className="text-muted-foreground">

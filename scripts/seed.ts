@@ -12,6 +12,7 @@ async function writePortraits() {
   await mkdir(dir, { recursive: true });
   for (const set of seedSets) {
     for (const person of set.people) {
+      if (person.photoUrl) continue;
       const file = path.join(dir, portraitFileName(person.name));
       await writeFile(file, portraitSvg(person.name));
     }

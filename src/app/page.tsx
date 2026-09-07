@@ -3,12 +3,13 @@ import { LilyGarden } from "@/components/lily-garden";
 import { ImportForm, UnlockForm } from "@/components/import-form";
 import { Button } from "@/components/ui/button";
 import { isEditor } from "@/lib/auth";
-import { ensureTestSet } from "@/lib/ensure-test-set";
-import { GARDEN_TEST_SLUG } from "@/lib/seed-data";
+import { ensureDefaultSet } from "@/lib/ensure-test-set";
+import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 
 export default async function HomePage() {
   const editor = await isEditor();
-  const practice = await ensureTestSet(GARDEN_TEST_SLUG).catch(() => null);
+  const deck = await ensureDefaultSet().catch(() => null);
+  const studyHref = deck ? `/study/${deck.slug}` : `/study/${DEFAULT_SET_SLUG}`;
 
   return (
     <main className="relative overflow-hidden px-6 pb-40 pt-8 md:pt-16">
@@ -18,18 +19,16 @@ export default async function HomePage() {
           Flashcards
         </h1>
         <p className="mt-4 max-w-md text-lg text-muted-foreground">
-          Learn names and faces.
+          Learn the Austin Area OBGYN team.
         </p>
-        {practice ? (
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" className="rounded-full px-6" asChild>
-              <Link href={`/study/${practice.slug}`}>Study</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/sets">Decks</Link>
-            </Button>
-          </div>
-        ) : null}
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Button size="lg" className="rounded-full px-8" asChild>
+            <Link href={studyHref}>Study</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/people">People</Link>
+          </Button>
+        </div>
         <div className="mt-12 space-y-8 rounded-[2rem] bg-card/70 p-6 shadow-sm ring-1 ring-border backdrop-blur-sm md:p-8">
           {!editor ? <UnlockForm /> : null}
           <ImportForm isEditor={editor} />

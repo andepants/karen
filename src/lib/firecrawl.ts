@@ -16,6 +16,8 @@ const PEOPLE_SCHEMA = {
         properties: {
           name: { type: "string" },
           description: { type: "string" },
+          role: { type: "string" },
+          bio: { type: "string" },
           photoUrl: { type: "string" },
           profileUrl: { type: "string" },
         },
@@ -33,6 +35,7 @@ type ScrapeData = {
       name?: string;
       description?: string;
       role?: string;
+      bio?: string;
       photoUrl?: string;
       profileUrl?: string;
     }>;
@@ -62,7 +65,7 @@ async function firecrawlScrape(url: string): Promise<ScrapeData> {
         {
           type: "json",
           prompt:
-            "Extract every person, team member, staff, faculty, or employee shown on this page. For each person include their full name, a short description (role, title, bio, or department), the URL of their portrait photo, and a profile/bio page URL if present. Skip logos, icons, and decorative images.",
+            "Extract every person, provider, doctor, clinician, team member, or staff shown on this page. For each person include their full name with credentials, their role or specialty, their complete biography text (every paragraph about them), the URL of their portrait photo, and a profile/bio page URL if present. Do not summarize the bio. Skip logos, icons, decorative images, and patients in testimonials.",
           schema: PEOPLE_SCHEMA,
         },
         "images",
@@ -101,7 +104,12 @@ function toPerson(
 ): ExtractedPerson | null {
   const name = raw.name?.trim();
   if (!name) return null;
-  const description = (raw.description || raw.role || "").trim();
+  const role = (raw.role || "").trim();
+  const bio = (raw.bio || "").trim();
+  const description = [role || raw.description, bio]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim() || (raw.description || "").trim();
   let photoUrl = raw.photoUrl?.trim() || null;
   if (photoUrl) {
     try {
@@ -145,7 +153,11 @@ export async function extractPeopleFromUrl(
 
   const title = first.json?.pageTitle || first.metadata?.title || parsed.hostname;
 
-  if (options.followProfiles) {
+  const shouldFollow =
+    options.followProfiles ||
+    /provider-bio|our-providers|\/team|\/staff|\/doctors/i.test(parsed.pathname);
+
+  if (shouldFollow) {
     const candidates = [
       ...people.map((p) => p.profileUrl).filter(Boolean),
       ...(first.links ?? []),
@@ -153,7 +165,10 @@ export async function extractPeopleFromUrl(
       .filter((href): href is string => Boolean(href))
       .filter((href) => sameOrigin(parsed.toString(), href))
       .filter((href) => href !== parsed.toString())
-      .slice(0, 30);
+      .filter((href) =>
+        /provider-bio|our-providers|\/team\/|\/staff\/|\/doctors\//i.test(href),
+      )
+      .slice(0, 45);
 
     const unique = [...new Set(candidates)];
     for (const href of unique) {
@@ -168,7 +183,9 @@ export async function extractPeopleFromUrl(
               (p) => p.name.toLowerCase() === key,
             );
             if (existing) {
-              existing.description ||= person.description;
+              if (person.description.length > existing.description.length) {
+                existing.description = person.description;
+              }
               existing.photoUrl ||= person.photoUrl;
               existing.profileUrl ||= person.profileUrl || href;
             }

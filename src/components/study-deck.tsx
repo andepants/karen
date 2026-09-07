@@ -195,48 +195,46 @@ export function StudyDeck({
         </Button>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setFlipped((value) => !value)}
-        className="w-full text-left"
-      >
-        <article
-          key={`${item.card.id}-${flipped ? "back" : "front"}`}
-          className="overflow-hidden rounded-[2rem] bg-card shadow-sm ring-1 ring-border"
+      <div className="flashcard-scene w-full">
+        <button
+          type="button"
+          aria-pressed={flipped}
+          aria-label={flipped ? "Hide answer" : "Show answer"}
+          onClick={() => setFlipped((value) => !value)}
+          className="flashcard-trigger"
         >
-          {isNameCard && !flipped ? (
-            <div className="flex aspect-[4/5] flex-col items-center justify-center bg-secondary px-6 text-center">
-              <p className="text-sm text-muted-foreground">Name</p>
-              <h1 className="mt-3 font-heading text-5xl">{item.person.name}</h1>
-            </div>
-          ) : item.person.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.person.photoUrl}
-              alt={flipped || isNameCard ? item.person.name : "Person"}
-              className="aspect-[4/5] w-full object-cover"
-            />
-          ) : (
-            <div className="flex aspect-[4/5] items-center justify-center bg-secondary font-heading text-7xl">
-              {flipped ? item.person.name.slice(0, 1) : "?"}
-            </div>
-          )}
-          <div className="px-6 py-5">
-            {flipped ? (
-              <>
-                <h1 className="font-heading text-4xl">{item.person.name}</h1>
-                <p className="mt-2 text-muted-foreground">
-                  {item.person.description || ""}
-                </p>
-              </>
-            ) : (
-              <p className="font-heading text-2xl text-muted-foreground">
-                {isNameCard ? "What do they look like?" : "What is their name?"}
-              </p>
-            )}
+          <div
+            key={item.card.id}
+            className={`flashcard-inner ring-1 ring-border ${flipped ? "is-flipped" : ""}`}
+          >
+            <article className="flashcard-face flashcard-front">
+              {isNameCard ? (
+                <NameFront name={item.person.name} />
+              ) : (
+                <FacePhoto
+                  name={item.person.name}
+                  photoUrl={item.person.photoUrl}
+                  labeled={false}
+                />
+              )}
+            </article>
+            <article className="flashcard-face flashcard-back">
+              {isNameCard ? (
+                <FacePhoto
+                  name={item.person.name}
+                  photoUrl={item.person.photoUrl}
+                  labeled
+                />
+              ) : (
+                <NameAndBio
+                  name={item.person.name}
+                  description={item.person.description || ""}
+                />
+              )}
+            </article>
           </div>
-        </article>
-      </button>
+        </button>
+      </div>
 
       {flipped ? (
         <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
@@ -305,6 +303,67 @@ export function StudyDeck({
         </p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
+function FacePhoto({
+  name,
+  photoUrl,
+  labeled,
+}: {
+  name: string;
+  photoUrl: string | null;
+  labeled: boolean;
+}) {
+  return (
+    <div className="relative h-full w-full">
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={photoUrl}
+          alt={labeled ? name : "Person"}
+          className="h-full w-full object-cover object-top"
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center bg-secondary font-heading text-7xl">
+          {labeled ? name.slice(0, 1) : "?"}
+        </div>
+      )}
+      {labeled ? (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-6 pb-5 pt-16">
+          <p className="font-heading text-3xl text-white">{name}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function NameFront({ name }: { name: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center bg-secondary px-6 text-center">
+      <h1 className="font-heading text-4xl leading-tight text-balance sm:text-5xl">
+        {name}
+      </h1>
+    </div>
+  );
+}
+
+function NameAndBio({
+  name,
+  description,
+}: {
+  name: string;
+  description: string;
+}) {
+  return (
+    <div className="flex h-full flex-col bg-card px-6 py-6">
+      <h1 className="shrink-0 font-heading text-3xl leading-tight sm:text-4xl">
+        {name}
+      </h1>
+      <p className="mt-3 min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+        {description}
+      </p>
     </div>
   );
 }
