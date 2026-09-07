@@ -1,12 +1,10 @@
-# Flashcards
+# Karen's Flashcards
 
-A simple app for names and faces.
+Learn every face.
 
-## Deck
+Default deck: Austin Area OBGYN (40 people) at `/study/aaobgyn`.
 
-Austin Area OBGYN (40 providers): `/study/aaobgyn`
-
-Open the app and click Study.
+Live: https://karen-lily-andepants-projects.vercel.app
 
 ## Local
 
@@ -14,7 +12,6 @@ Open the app and click Study.
 vercel link
 vercel env pull .env.local --yes
 npm run db:push
-npm run portraits
 npm run db:seed
 npm run dev
 ```

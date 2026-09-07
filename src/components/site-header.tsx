@@ -16,15 +16,15 @@ export function SiteHeader({
       <Link href="/" className="flex items-center gap-2">
         <LilyMark className="h-10 w-8" />
         <span className="font-heading text-xl tracking-wide text-foreground">
-          Flashcards
+          Karen&apos;s Flashcards
         </span>
       </Link>
       <nav className="flex items-center gap-1 sm:gap-2">
         <Button variant="ghost" asChild>
-          <Link href="/sets">Decks</Link>
+          <Link href="/people">Roster</Link>
         </Button>
         <Button variant="ghost" asChild>
-          <Link href="/people">People</Link>
+          <Link href="/settings">Settings</Link>
         </Button>
         <Button variant="ghost" asChild>
           <Link href={`/study/${DEFAULT_SET_SLUG}`} className="gap-1.5">

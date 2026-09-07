@@ -20,11 +20,13 @@ import {
   studySnapshot,
   type StudySnapshot,
 } from "@/lib/queue";
+import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
 
 function refreshStudy() {
   revalidatePath("/study");
   revalidatePath("/sets");
   revalidatePath("/people");
+  revalidatePath("/settings");
   revalidatePath("/");
 }
 
@@ -257,6 +259,18 @@ export async function suspendCard(cardId: string, scope: "card" | "note" = "card
   refreshStudy();
   const setId = await loadCardSetId(cardId);
   return { ok: true as const, ...(await studySnapshot({ setId, skipCardId: cardId })) };
+}
+
+export async function studyMore(setId: string, extra = 20) {
+  await ensureSchema();
+  const prefs = await getStudyPrefs();
+  await writeStudyPrefs({
+    ...prefs,
+    bonus: prefs.bonus + Math.max(10, extra),
+  });
+  await unburySet(setId);
+  refreshStudy();
+  return { ok: true as const, ...(await studySnapshot({ setId })) };
 }
 
 export async function unburySet(setId: string) {

@@ -5,10 +5,13 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import {
   buryCard,
   rateCard,
+  studyMore,
   suspendCard,
   undoLastReview,
 } from "@/actions/study";
+import { PersonFacts } from "@/components/person-facts";
 import { Rating, stateLabel } from "@/lib/fsrs";
+import { gradeTone, memoryGrade } from "@/lib/grades";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { StudySnapshot } from "@/lib/queue";
@@ -136,24 +139,25 @@ export function StudyDeck({
     return () => window.removeEventListener("keydown", onKey);
   }, [initial.set?.id]);
 
-  const overviewHref = setSlug ? `/sets/${setSlug}` : "/sets";
-
   if (!item) {
     return (
       <div className="mx-auto max-w-lg rounded-3xl bg-card/80 px-8 py-16 text-center shadow-sm">
         <p className="text-sm text-muted-foreground">
           {initial.set?.name ?? "Study"}
         </p>
-        <h1 className="mt-3 font-heading text-4xl">You&apos;re all caught up.</h1>
-        <p className="mt-3 text-muted-foreground">
-          Come back tomorrow for more cards.
-        </p>
+        <h1 className="mt-3 font-heading text-4xl">That&apos;s all for now.</h1>
+        <p className="mt-3 text-muted-foreground">Keep going, or pick it up later.</p>
         <div className="mt-8 flex justify-center gap-3">
-          <Button asChild>
-            <Link href={overviewHref}>Done</Link>
-          </Button>
+          {initial.set?.id ? (
+            <Button
+              disabled={pending}
+              onClick={() => run(() => studyMore(initial.set!.id))}
+            >
+              Study more
+            </Button>
+          ) : null}
           <Button variant="outline" asChild>
-            <Link href="/sets">Decks</Link>
+            <Link href="/settings">Settings</Link>
           </Button>
         </div>
       </div>
@@ -162,8 +166,10 @@ export function StudyDeck({
 
   const isNameCard = item.card.kind === "name";
 
+  const letter = memoryGrade(item.card);
+
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5">
+    <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5 pb-28">
       <div className="flex w-full items-center justify-between text-sm">
         <div className="flex gap-3 text-muted-foreground">
           <span>
@@ -189,19 +195,41 @@ export function StudyDeck({
             {isNameCard ? "Name card" : "Photo card"}
           </Badge>
           {item.card.leech ? <Badge variant="destructive">Hard</Badge> : null}
+          <Badge variant="outline" className={gradeTone(letter)}>
+            {letter}
+          </Badge>
         </div>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href={overviewHref}>Back</Link>
-        </Button>
+        <div className="flex gap-1">
+          {initial.set?.id ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={pending}
+              onClick={() => run(() => studyMore(initial.set!.id))}
+            >
+              Study more
+            </Button>
+          ) : null}
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/settings">Settings</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flashcard-scene w-full">
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           aria-pressed={flipped}
           aria-label={flipped ? "Hide answer" : "Show answer"}
-          onClick={() => setFlipped((value) => !value)}
           className="flashcard-trigger"
+          onClick={() => setFlipped((value) => !value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setFlipped((value) => !value);
+            }
+          }}
         >
           <div
             key={item.card.id}
@@ -233,31 +261,37 @@ export function StudyDeck({
               )}
             </article>
           </div>
-        </button>
+        </div>
       </div>
 
-      {flipped ? (
-        <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
-          {ratings.map((rating) => (
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
+        <div className="mx-auto grid w-full max-w-lg grid-cols-2 gap-2 sm:grid-cols-4">
+          {flipped ? (
+            ratings.map((rating) => (
+              <Button
+                key={rating.value}
+                disabled={pending}
+                variant={rating.value === Rating.Again ? "destructive" : "secondary"}
+                className="h-auto flex-col rounded-2xl py-3"
+                onClick={() => grade(rating.value)}
+              >
+                <span>{rating.label}</span>
+                <span className="text-[10px] font-normal opacity-70">
+                  {intervals?.[rating.value] ?? rating.hint}
+                </span>
+              </Button>
+            ))
+          ) : (
             <Button
-              key={rating.value}
-              disabled={pending}
-              variant={rating.value === Rating.Again ? "destructive" : "secondary"}
-              className="h-auto flex-col rounded-2xl py-3"
-              onClick={() => grade(rating.value)}
+              size="lg"
+              className="col-span-2 rounded-full sm:col-span-4"
+              onClick={() => setFlipped(true)}
             >
-              <span>{rating.label}</span>
-              <span className="text-[10px] font-normal opacity-70">
-                {intervals?.[rating.value] ?? rating.hint}
-              </span>
+              Show answer
             </Button>
-          ))}
+          )}
         </div>
-      ) : (
-        <Button size="lg" className="rounded-full px-8" onClick={() => setFlipped(true)}>
-          Show answer
-        </Button>
-      )}
+      </div>
 
       <div className="flex w-full flex-wrap justify-center gap-2">
         <Button
@@ -357,13 +391,11 @@ function NameAndBio({
   description: string;
 }) {
   return (
-    <div className="flex h-full flex-col bg-card px-6 py-6">
-      <h1 className="shrink-0 font-heading text-3xl leading-tight sm:text-4xl">
-        {name}
-      </h1>
-      <p className="mt-3 min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-        {description}
-      </p>
+    <div className="flex h-full flex-col bg-card px-6 py-5">
+      <h1 className="shrink-0 font-heading text-3xl leading-tight">{name}</h1>
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+        <PersonFacts description={description} compact />
+      </div>
     </div>
   );
 }

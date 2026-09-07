@@ -19,8 +19,8 @@ const sans = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "Flashcards",
-  description: "Learn names and faces.",
+  title: "Karen's Flashcards",
+  description: "Learn every face.",
 };
 
 export const dynamic = "force-dynamic";

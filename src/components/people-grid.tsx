@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -19,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { gradeTone, type MemoryGrade } from "@/lib/grades";
 import type { people as peopleTable, sets as setsTable } from "@/db/schema";
 
 type Person = typeof peopleTable.$inferSelect;
@@ -28,13 +30,15 @@ export function PeopleGrid({
   people,
   sets,
   isEditor,
+  grades,
 }: {
   people: Person[];
   sets: SetRow[];
   isEditor: boolean;
+  grades: Record<string, MemoryGrade>;
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
       {isEditor ? <AddPersonCard sets={sets} /> : null}
       {people.map((person) => (
         <PersonCard
@@ -42,6 +46,7 @@ export function PeopleGrid({
           person={person}
           sets={sets}
           isEditor={isEditor}
+          grade={grades[person.id] ?? "—"}
         />
       ))}
     </div>
@@ -51,8 +56,8 @@ export function PeopleGrid({
 function AddPersonCard({ sets }: { sets: SetRow[] }) {
   return (
     <Card className="border-dashed bg-card/60">
-      <CardContent className="flex h-full min-h-48 flex-col justify-center p-5">
-        <p className="font-heading text-xl">Add Person</p>
+      <CardContent className="flex h-full min-h-36 flex-col justify-center p-4">
+        <p className="font-heading text-lg">Add</p>
         <PersonForm sets={sets} />
       </CardContent>
     </Card>
@@ -63,32 +68,34 @@ function PersonCard({
   person,
   sets,
   isEditor,
+  grade,
 }: {
   person: Person;
   sets: SetRow[];
   isEditor: boolean;
+  grade: MemoryGrade;
 }) {
   return (
     <Card className={person.archived ? "opacity-60" : "bg-card/90"}>
-      <CardContent className="space-y-3 p-5">
-        {person.photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={person.photoUrl}
-            alt={person.name}
-            className="aspect-square w-full rounded-2xl object-cover object-top"
-          />
-        ) : (
-          <div className="flex aspect-square items-center justify-center rounded-2xl bg-secondary font-heading text-4xl text-muted-foreground">
-            {person.name.slice(0, 1)}
+      <CardContent className="space-y-2 p-3">
+        <Link href={`/people/${person.id}`} className="block">
+          {person.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={person.photoUrl}
+              alt={person.name}
+              className="aspect-square w-full rounded-xl object-cover object-top"
+            />
+          ) : (
+            <div className="flex aspect-square items-center justify-center rounded-xl bg-secondary font-heading text-3xl text-muted-foreground">
+              {person.name.slice(0, 1)}
+            </div>
+          )}
+          <div className="mt-2 flex items-start justify-between gap-2">
+            <h2 className="font-heading text-lg leading-tight">{person.name}</h2>
+            <span className={`text-sm font-medium ${gradeTone(grade)}`}>{grade}</span>
           </div>
-        )}
-        <div>
-          <h2 className="font-heading text-2xl leading-tight">{person.name}</h2>
-          <p className="mt-1 line-clamp-4 text-sm text-muted-foreground">
-            {person.description || ""}
-          </p>
-        </div>
+        </Link>
         {isEditor ? (
           <div className="flex gap-2">
             <Dialog>
@@ -173,7 +180,7 @@ function PersonForm({ person, sets }: { person?: Person; sets: SetRow[] }) {
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor={`description-${person?.id ?? "new"}`}>Description</Label>
+        <Label htmlFor={`description-${person?.id ?? "new"}`}>Notes</Label>
         <Textarea
           id={`description-${person?.id ?? "new"}`}
           name="description"

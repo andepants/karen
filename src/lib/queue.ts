@@ -9,6 +9,7 @@ import {
   previewIntervals,
   type CardRow,
 } from "./fsrs";
+import { getStudyPrefs } from "./session-prefs";
 
 export type SetRow = typeof sets.$inferSelect;
 export type PersonRow = typeof people.$inferSelect;
@@ -84,13 +85,17 @@ async function todayUsage(setId: string | undefined, now: Date) {
 }
 
 async function loadLimits(setId?: string) {
+  const prefs = await getStudyPrefs();
   if (!setId) {
-    return { newCardsPerDay: NEW_CARDS_PER_DAY, reviewsPerDay: REVIEWS_PER_DAY };
+    return {
+      newCardsPerDay: prefs.session + prefs.bonus,
+      reviewsPerDay: REVIEWS_PER_DAY,
+    };
   }
   const db = getDb();
   const [row] = await db.select().from(sets).where(eq(sets.id, setId)).limit(1);
   return {
-    newCardsPerDay: row?.newCardsPerDay ?? NEW_CARDS_PER_DAY,
+    newCardsPerDay: (prefs.session || row?.newCardsPerDay || NEW_CARDS_PER_DAY) + prefs.bonus,
     reviewsPerDay: row?.reviewsPerDay ?? REVIEWS_PER_DAY,
   };
 }
@@ -272,6 +277,29 @@ export async function studySnapshot(options: {
     intervals: item ? previewIntervals(item.card, now) : null,
     canUndo: await canUndoLast(options.setId),
     set,
+  };
+}
+
+export async function studyStats(setId: string, now = new Date()) {
+  const db = getDb();
+  const prefs = await getStudyPrefs();
+  const usage = await todayUsage(setId, now);
+  const counts = await studyCounts({ setId, now });
+  const remaining = await dueCount({ setId, now });
+  const roster = await db
+    .select({ card: cards, person: people })
+    .from(cards)
+    .innerJoin(people, eq(people.id, cards.personId))
+    .where(and(eq(people.setId, setId), eq(people.archived, false)));
+
+  return {
+    prefs,
+    usage,
+    counts,
+    remaining,
+    people: new Set(roster.map((row) => row.person.id)).size,
+    cards: roster.length,
+    roster,
   };
 }
 
