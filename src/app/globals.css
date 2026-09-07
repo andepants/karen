@@ -147,6 +147,15 @@
   cursor: pointer;
   text-align: left;
   touch-action: manipulation;
+  outline: none;
+  box-shadow: none;
+}
+
+.flashcard-trigger:focus,
+.flashcard-trigger:focus-visible,
+.flashcard-trigger:active {
+  outline: none;
+  box-shadow: none;
 }
 
 .flashcard-inner {

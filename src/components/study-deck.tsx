@@ -187,7 +187,7 @@ export function StudyDeck({
         >
           <div
             key={item.card.id}
-            className={`flashcard-inner ring-1 ring-border ${flipped ? "is-flipped" : ""}`}
+            className={`flashcard-inner ${flipped ? "is-flipped" : ""}`}
           >
             <article className="flashcard-face flashcard-front">
               {isNameCard ? (
