@@ -284,6 +284,11 @@
 }
 
 .kayak-pond {
+  width: 100%;
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   background: linear-gradient(
     180deg,
     oklch(0.93 0.03 145 / 0.35) 0%,

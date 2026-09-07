@@ -20,8 +20,8 @@ export function HomeIntro({
   shareOrigin?: string;
 }) {
   return (
-    <main className="relative flex min-h-[calc(100dvh-5.5rem)] flex-col items-center overflow-x-hidden px-6 pt-4 pb-20">
-      <div className="flex w-full flex-1 flex-col items-center justify-center">
+    <main className="relative flex min-h-[calc(100dvh-5.5rem)] flex-col items-center overflow-x-hidden pt-4">
+      <div className="flex w-full flex-1 flex-col items-center justify-center px-6 pb-10">
         <div className="intro-lily">
           <LilyMark className="h-40 w-32 md:h-52 md:w-40" />
         </div>

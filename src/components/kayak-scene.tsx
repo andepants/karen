@@ -80,7 +80,7 @@ function Paddle({ className }: { className?: string }) {
 export function KayakScene() {
   return (
     <div
-      className="kayak-pond relative mt-10 h-32 w-full max-w-3xl self-stretch overflow-hidden rounded-[1.75rem] ring-1 ring-border/80 sm:h-36"
+      className="kayak-pond relative mt-auto h-32 w-full overflow-hidden rounded-none sm:h-36"
       aria-hidden="true"
     >
       <div className="kayak-water pointer-events-none absolute inset-0" />
