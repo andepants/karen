@@ -144,6 +144,7 @@ export async function ensureSchema() {
     exception when undefined_table or undefined_object then null;
     end $$
   `);
+  await db.execute(sql`drop index if exists cards_person_kind_idx`);
 
   await db.execute(sql`
     do $$ begin

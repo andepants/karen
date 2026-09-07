@@ -39,7 +39,9 @@ export async function ensureBuiltinProfiles() {
   const have = new Set(existing.map((row) => row.slug));
   const missing = wanted.filter((row) => !have.has(row.slug));
   if (missing.length) {
-    await db.insert(profiles).values(missing);
+    await db.insert(profiles).values(missing).onConflictDoNothing({
+      target: profiles.slug,
+    });
   }
 }
 
@@ -97,9 +99,14 @@ export async function resolveProfile(slug = DEFAULT_PROFILE_SLUG) {
     const [created] = await db
       .insert(profiles)
       .values({ slug: normalized, name: normalized })
+      .onConflictDoNothing({ target: profiles.slug })
       .returning();
-    await ensureProfileCards(created.id);
-    return created;
+    const row = created ?? (await getProfileBySlug(normalized));
+    if (!row) {
+      return getProfileBySlug(DEFAULT_PROFILE_SLUG).then((fallback) => fallback!);
+    }
+    await ensureProfileCards(row.id);
+    return row;
   }
   return getProfileBySlug(DEFAULT_PROFILE_SLUG).then((row) => row!);
 }
@@ -130,9 +137,17 @@ export async function createNamedProfile(rawName: string) {
   if (!isValidProfileSlug(slug) || (await getProfileBySlug(slug))) {
     return { ok: false as const, error: "That name is already used." };
   }
-  const [created] = await db.insert(profiles).values({ slug, name }).returning();
-  await ensureProfileCards(created.id);
-  return { ok: true as const, profile: created };
+  const [created] = await db
+    .insert(profiles)
+    .values({ slug, name })
+    .onConflictDoNothing({ target: profiles.slug })
+    .returning();
+  const row = created ?? (await getProfileBySlug(slug));
+  if (!row) {
+    return { ok: false as const, error: "That name is already used." };
+  }
+  await ensureProfileCards(row.id);
+  return { ok: true as const, profile: row };
 }
 
 export async function updateProfileSettings(
@@ -169,7 +184,7 @@ export async function ensureProfileCards(profileId: string) {
     ),
   );
   if (missing.length) {
-    await db.insert(cards).values(missing);
+    await db.insert(cards).values(missing).onConflictDoNothing();
   }
 }
 
@@ -187,7 +202,7 @@ export async function ensureCardsForPerson(personId: string) {
       (row) => !have.has(row.kind),
     );
     if (missing.length) {
-      await db.insert(cards).values(missing);
+      await db.insert(cards).values(missing).onConflictDoNothing();
     }
   }
 }
