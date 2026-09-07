@@ -1,4 +1,4 @@
-import { GradeStrip } from "@/components/memory-grades";
+import { GradeBars } from "@/components/memory-grades";
 import { timeZoneLabel } from "@/lib/dates";
 import type { GradeCounts } from "@/lib/grades";
 import type { ProgressSnapshot } from "@/lib/progress";
@@ -164,10 +164,11 @@ export function ProgressDashboard({
       <section>
         <h2 className="font-heading text-3xl">Memory</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Grades fade as you forget. A is fresh. F needs work.
+          New is everyone not graded yet. The letters are where they stand after
+          you have seen them.
         </p>
-        <div className="mt-4">
-          <GradeStrip people={people} counts={gradeCounts} />
+        <div className="mt-5">
+          <GradeBars people={people} counts={gradeCounts} />
         </div>
         {ratingTotal ? (
           <p className="mt-4 text-sm text-muted-foreground">

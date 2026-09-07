@@ -9,7 +9,6 @@ import {
   suspendCard,
   undoLastReview,
 } from "@/actions/study";
-import { GradeStrip } from "@/components/memory-grades";
 import { PersonFacts } from "@/components/person-facts";
 import { PromptToggle, type PromptSide } from "@/components/prompt-toggle";
 import {
@@ -167,18 +166,14 @@ export function StudyDeck({
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-5 pb-28">
-      <div className="flex w-full items-start justify-between gap-3">
-        <GradeStrip people={people} counts={grades} />
-        <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-          {elapsed}s
-        </span>
-      </div>
-
       <div className="flex w-full items-center justify-between gap-3">
-        <p className="font-heading text-3xl tabular-nums">
-          {current}
-          <span className="text-muted-foreground">/{total}</span>
-        </p>
+        <div className="flex items-baseline gap-3">
+          <p className="font-heading text-3xl tabular-nums">
+            {current}
+            <span className="text-muted-foreground">/{total}</span>
+          </p>
+          <span className="text-sm tabular-nums text-muted-foreground">{elapsed}s</span>
+        </div>
         <PromptToggle
           value={prompt}
           onChange={(value) => {

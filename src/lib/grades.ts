@@ -67,5 +67,14 @@ export function gradeTone(grade: MemoryGrade) {
   if (grade === "C") return "text-amber-700";
   if (grade === "D") return "text-orange-700";
   if (grade === "E" || grade === "F") return "text-rose-700";
-  return "text-muted-foreground";
+  return "text-sky-700";
+}
+
+export function gradeBarFill(grade: MemoryGrade) {
+  if (grade === "A") return "bg-emerald-600";
+  if (grade === "B") return "bg-lime-600";
+  if (grade === "C") return "bg-amber-500";
+  if (grade === "D") return "bg-orange-500";
+  if (grade === "E" || grade === "F") return "bg-rose-600";
+  return "bg-sky-600";
 }
