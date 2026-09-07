@@ -32,55 +32,15 @@ const ratings = [
   { value: Rating.Easy, label: "Easy", hint: "Instant" },
 ] as const;
 
-type DeckState = {
-  item: StudySnapshot["item"];
-  upcoming: StudyItem[];
-  intervals: StudySnapshot["intervals"];
-  nextIntervals: StudySnapshot["nextIntervals"];
-  canUndo: boolean;
-  people: number;
-  grades: StudySnapshot["grades"];
-};
-
-function snapshotToDeck(snapshot: StudySnapshot): DeckState {
-  return {
-    item: snapshot.item,
-    upcoming: snapshot.upcoming ?? [],
-    intervals: snapshot.intervals,
-    nextIntervals: snapshot.nextIntervals ?? null,
-    canUndo: snapshot.canUndo,
-    people: snapshot.people,
-    grades: snapshot.grades ?? emptyGradeCounts(),
-  };
-}
-
-function advanceDeck(current: DeckState): DeckState {
-  const [next, ...rest] = current.upcoming;
-  return {
-    ...current,
-    item: next ?? null,
-    upcoming: rest,
-    intervals: current.nextIntervals,
-    nextIntervals: null,
-    canUndo: true,
-  };
+function queueFromSnapshot(snapshot: StudySnapshot) {
+  return [snapshot.item, ...(snapshot.upcoming ?? [])].filter(
+    (item): item is StudyItem => Boolean(item),
+  );
 }
 
 function readPrompt(): PromptSide {
   if (typeof window === "undefined") return "picture";
   return window.sessionStorage.getItem(PROMPT_KEY) === "name" ? "name" : "picture";
-}
-
-function photoUrlsFor(items: Array<StudyItem | null | undefined>) {
-  const urls: string[] = [];
-  const seen = new Set<string>();
-  for (const item of items) {
-    const url = item?.person.photoUrl;
-    if (!url || seen.has(url)) continue;
-    seen.add(url);
-    urls.push(url);
-  }
-  return urls;
 }
 
 export function StudyDeck({
@@ -89,7 +49,13 @@ export function StudyDeck({
   initial: StudySnapshot;
 }) {
   const sessionSize = roundSize(initial.roundSize || DEFAULT_SESSION);
-  const [deck, setDeck] = useState(() => snapshotToDeck(initial));
+  const [queue, setQueue] = useState(() => queueFromSnapshot(initial));
+  const [cursor, setCursor] = useState(0);
+  const [intervals, setIntervals] = useState(initial.intervals);
+  const [nextIntervals, setNextIntervals] = useState(initial.nextIntervals ?? null);
+  const [canUndo, setCanUndo] = useState(initial.canUndo);
+  const [people, setPeople] = useState(initial.people);
+  const [grades, setGrades] = useState(initial.grades ?? emptyGradeCounts());
   const [flipped, setFlipped] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -100,13 +66,13 @@ export function StudyDeck({
   const [prompt, setPrompt] = useState<PromptSide>("picture");
   const [cardPrompt, setCardPrompt] = useState<PromptSide>("picture");
   const startedAt = useRef(Date.now());
-  const deckRef = useRef(deck);
   const promptRef = useRef<PromptSide>("picture");
   const sampleRef = useRef(initial.samplePersonIds);
-  const flightRef = useRef(0);
   const gradingCardId = useRef<string | null>(null);
+  const item = queue[cursor] ?? null;
+  const nextItem = queue[cursor + 1] ?? null;
+  const itemId = item?.card.id;
 
-  deckRef.current = deck;
   promptRef.current = prompt;
 
   useEffect(() => {
@@ -129,76 +95,58 @@ export function StudyDeck({
     setFlipped(false);
     setRevealed(false);
     setCardPrompt(promptRef.current);
-    if (gradingCardId.current !== deck.item?.card.id) {
-      gradingCardId.current = null;
-    }
+    gradingCardId.current = null;
     const timer = window.setInterval(() => {
       setElapsed(Math.floor((Date.now() - startedAt.current) / 1000));
     }, 250);
     return () => window.clearInterval(timer);
-  }, [deck.item?.card.id]);
+  }, [itemId]);
+
+  function showNextCard() {
+    setFlipped(false);
+    setRevealed(false);
+    setIntervals(nextIntervals);
+    setNextIntervals(null);
+    setCanUndo(true);
+    setCursor((value) => value + 1);
+  }
 
   function applyServerSnapshot(snapshot: StudySnapshot) {
     if (snapshot.samplePersonIds?.length) {
       sampleRef.current = snapshot.samplePersonIds;
     }
-    setDeck(snapshotToDeck(snapshot));
-  }
-
-  function run(
-    action: () => Promise<StudySnapshot | { error: string } | { ok: true } & StudySnapshot>,
-    options?: { rating?: number; timeMs?: number; optimistic?: boolean },
-  ) {
-    setError(null);
-    const previous = deckRef.current;
-    const flight = ++flightRef.current;
-    if (options?.optimistic && previous.item) {
-      setFlipped(false);
-      setRevealed(false);
-      setDeck(advanceDeck(previous));
-      if (options.rating != null && options.timeMs != null) {
-        setSession((current) =>
-          addSessionRating(current, options.rating!, options.timeMs!),
-        );
-      }
-    }
-    startTransition(async () => {
-      const result = await action();
-      if (flight !== flightRef.current) return;
-      if ("error" in result && result.error) {
-        setDeck(previous);
-        setError(result.error);
-        return;
-      }
-      if (!("item" in result)) return;
-      if ("leech" in result) setLeechNote(Boolean(result.leech));
-      else setLeechNote(false);
-      if (
-        options?.rating != null &&
-        options.timeMs != null &&
-        !options.optimistic
-      ) {
-        setSession((current) =>
-          addSessionRating(current, options.rating!, options.timeMs!),
-        );
-      }
-      applyServerSnapshot(result);
-    });
+    setQueue(queueFromSnapshot(snapshot));
+    setCursor(0);
+    setIntervals(snapshot.intervals);
+    setNextIntervals(snapshot.nextIntervals ?? null);
+    setCanUndo(snapshot.canUndo);
+    setPeople(snapshot.people);
+    setGrades(snapshot.grades ?? emptyGradeCounts());
   }
 
   function grade(rating: number) {
-    const current = deckRef.current.item;
-    if (!current || gradingCardId.current === current.card.id) return;
-    gradingCardId.current = current.card.id;
+    if (!item || gradingCardId.current === item.card.id) return;
+    gradingCardId.current = item.card.id;
     const timeMs = Date.now() - startedAt.current;
-    run(() => rateCard(current.card.id, rating, timeMs, sampleRef.current), {
-      rating,
-      timeMs,
-      optimistic: true,
+    setSession((current) => addSessionRating(current, rating, timeMs));
+    showNextCard();
+    void rateCard(item.card.id, rating, timeMs, sampleRef.current).then((result) => {
+      if ("error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
+      if ("leech" in result) setLeechNote(Boolean(result.leech));
     });
   }
 
-  const item = deck.item;
+  function skipOrTurnOff(action: () => Promise<{ error?: string; ok?: true }>) {
+    if (!item) return;
+    showNextCard();
+    void action().then((result) => {
+      if (result.error) setError(result.error);
+    });
+  }
+
   if (!item || session.cards >= sessionSize) {
     return (
       <div className="px-6">
@@ -206,15 +154,18 @@ export function StudyDeck({
           setName={initial.set?.name ?? "Study"}
           setId={initial.set?.id}
           session={session}
-          people={deck.people}
-          grades={deck.grades}
+          people={people}
+          grades={grades}
           profileSlug={initial.profileSlug}
           pending={pending}
           onStudyMore={() => {
             if (!initial.set?.id) return;
             setSession(emptySessionScore());
             sampleRef.current = [];
-            run(() => studyMore(initial.set!.id, sessionSize));
+            startTransition(async () => {
+              const result = await studyMore(initial.set!.id, sessionSize);
+              if ("item" in result) applyServerSnapshot(result);
+            });
           }}
         />
       </div>
@@ -224,11 +175,10 @@ export function StudyDeck({
   const pictureFirst = cardPrompt === "picture";
   const current = session.cards + 1;
   const total = sessionSize;
-  const preloadUrls = photoUrlsFor([item, ...deck.upcoming.slice(0, 4)]);
 
   return (
     <div className="flex w-full flex-col items-center gap-5 pb-28">
-      <PhotoPreload urls={preloadUrls} />
+      <PhotoPreload item={nextItem} />
       <div className="flex w-full max-w-lg items-center justify-between gap-3 px-6">
         <div className="flex items-baseline gap-3">
           <p className="font-heading text-3xl tabular-nums">
@@ -311,7 +261,7 @@ export function StudyDeck({
               >
                 <span>{rating.label}</span>
                 <span className="text-[10px] font-normal opacity-70">
-                  {deck.intervals?.[rating.value] ?? rating.hint}
+                  {intervals?.[rating.value] ?? rating.hint}
                 </span>
               </Button>
             ))
@@ -334,31 +284,32 @@ export function StudyDeck({
         <Button
           variant="outline"
           size="sm"
-          disabled={pending || !deck.canUndo}
-          onClick={() => run(() => undoLastReview(initial.set?.id, sampleRef.current))}
+          disabled={pending || !canUndo}
+          onClick={() => {
+            startTransition(async () => {
+              const result = await undoLastReview(initial.set?.id, sampleRef.current);
+              if ("error" in result && result.error) {
+                setError(result.error);
+                return;
+              }
+              if ("item" in result) applyServerSnapshot(result);
+            });
+          }}
         >
           Undo
         </Button>
         <Button
           variant="outline"
           size="sm"
-          disabled={pending}
-          onClick={() =>
-            run(() => buryCard(item.card.id, "card", sampleRef.current), {
-              optimistic: true,
-            })
-          }
+          onClick={() => skipOrTurnOff(() => buryCard(item.card.id, "card", sampleRef.current))}
         >
           Skip
         </Button>
         <Button
           variant="outline"
           size="sm"
-          disabled={pending}
           onClick={() =>
-            run(() => suspendCard(item.card.id, "note", sampleRef.current), {
-              optimistic: true,
-            })
+            skipOrTurnOff(() => suspendCard(item.card.id, "note", sampleRef.current))
           }
         >
           Turn Off
@@ -375,24 +326,29 @@ export function StudyDeck({
   );
 }
 
-function PhotoPreload({ urls }: { urls: string[] }) {
+function PhotoPreload({ item }: { item: StudyItem | null }) {
+  const url = item?.person.photoUrl;
+  if (!url) return null;
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
-    >
-      {urls.map((url) => (
+    <>
+      <link rel="preload" as="image" href={url} />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute h-px w-px overflow-hidden opacity-0"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="" width={512} height={640} />
         <Image
-          key={url}
           src={url}
           alt=""
           width={512}
           height={640}
           sizes="(max-width: 640px) 100vw, 512px"
           quality={75}
+          unoptimized
         />
-      ))}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -418,6 +374,7 @@ function FacePhoto({
           quality={75}
           className="object-cover object-top"
           priority={priority}
+          unoptimized
         />
       ) : (
         <div className="flex h-full items-center justify-center bg-secondary font-heading text-7xl">

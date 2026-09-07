@@ -15,7 +15,6 @@ import {
 } from "@/lib/fsrs";
 import { ensureSchema } from "@/lib/ensure-schema";
 import {
-  isDueCard,
   nextUtcDay,
   rosterGrades,
   studySnapshot,
@@ -26,7 +25,7 @@ import { getActiveProfile } from "@/lib/profiles";
 import { progressStats } from "@/lib/progress";
 import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
 import { roundSize } from "@/lib/session-limits";
-import { clearSessionSample } from "@/lib/session-sample";
+import { clearSessionSample, writeSessionSample } from "@/lib/session-sample";
 
 function refreshStudy() {
   revalidatePath("/study");
@@ -52,17 +51,6 @@ function snapshotFromRow(row: typeof cards.$inferSelect) {
     suspended: row.suspended,
     leech: row.leech,
   };
-}
-
-async function loadCardSetId(cardId: string) {
-  const db = getDb();
-  const [row] = await db
-    .select({ setId: people.setId })
-    .from(cards)
-    .innerJoin(people, eq(people.id, cards.personId))
-    .where(eq(cards.id, cardId))
-    .limit(1);
-  return row?.setId ?? undefined;
 }
 
 async function burySiblings(
@@ -93,24 +81,21 @@ export async function getStudyState(
 }
 
 export async function lockStudySample(setId: string, personIds: string[]) {
-  return studySnapshot({
-    setId,
-    samplePersonIds: personIds,
-    persistSample: true,
-  });
+  const profile = await getActiveProfile();
+  await writeSessionSample(setId, personIds, profile.id);
+  return { ok: true as const };
 }
 
 export async function rateCard(
   cardId: string,
   rating: number,
   reviewTimeMs?: number,
-  samplePersonIds?: string[],
+  _samplePersonIds?: string[],
 ) {
   if (!isGrade(rating)) {
     return { error: "Invalid rating." };
   }
 
-  await ensureSchema();
   const db = getDb();
   const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
   if (!row) {
@@ -118,10 +103,6 @@ export async function rateCard(
   }
 
   const now = new Date();
-  const setIdForCard = await loadCardSetId(cardId);
-  if (!(await isDueCard(cardId, { setId: setIdForCard, now }))) {
-    return { error: "Card is not due." };
-  }
   const result = scheduler.next(rowToFsrs(row), now, rating);
   const next = fsrsToRow(result.card);
   const leech = next.lapses >= LEECH_THRESHOLD;
@@ -153,18 +134,8 @@ export async function rateCard(
     ),
   });
 
-  await burySiblings(row.personId, cardId, now, row.profileId);
-  refreshStudy();
-
-  const snapshot = await studySnapshot({
-    setId: setIdForCard,
-    now,
-    skipCardId: cardId,
-    skipPersonId: row.personId,
-    samplePersonIds,
-    persistSample: true,
-  });
-  return { ok: true as const, leech, ...snapshot };
+  void burySiblings(row.personId, cardId, now, row.profileId);
+  return { ok: true as const, leech };
 }
 
 export async function undoLastReview(
@@ -232,9 +203,8 @@ export async function undoLastReview(
 export async function buryCard(
   cardId: string,
   scope: "card" | "note" = "card",
-  samplePersonIds?: string[],
+  _samplePersonIds?: string[],
 ) {
-  await ensureSchema();
   const db = getDb();
   const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
   if (!row) return { error: "Card not found." };
@@ -256,26 +226,14 @@ export async function buryCard(
     await burySiblings(row.personId, cardId, new Date(), row.profileId);
   }
 
-  refreshStudy();
-  const setId = await loadCardSetId(cardId);
-  return {
-    ok: true as const,
-    ...(await studySnapshot({
-      setId,
-      skipCardId: cardId,
-      skipPersonId: row.personId,
-      samplePersonIds,
-      persistSample: true,
-    })),
-  };
+  return { ok: true as const };
 }
 
 export async function suspendCard(
   cardId: string,
   scope: "card" | "note" = "card",
-  samplePersonIds?: string[],
+  _samplePersonIds?: string[],
 ) {
-  await ensureSchema();
   const db = getDb();
   const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
   if (!row) return { error: "Card not found." };
@@ -297,18 +255,7 @@ export async function suspendCard(
       .where(eq(cards.id, cardId));
   }
 
-  refreshStudy();
-  const setId = await loadCardSetId(cardId);
-  return {
-    ok: true as const,
-    ...(await studySnapshot({
-      setId,
-      skipCardId: cardId,
-      skipPersonId: row.personId,
-      samplePersonIds,
-      persistSample: true,
-    })),
-  };
+  return { ok: true as const };
 }
 
 export async function getStudyRecap(setId?: string) {
