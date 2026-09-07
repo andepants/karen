@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 350" role="img" aria-label="Mateo Silva">
+  <rect width="280" height="350" fill="#e8f0e4"/>
+  <circle cx="140" cy="138" r="62" fill="#d9a066"/>
+  <path d="M64 110 C58 30 222 18 218 118 C200 46 84 52 64 110Z" fill="#2c1b4d"/>
+  <ellipse cx="118" cy="136" rx="7" ry="8" fill="#2b2118"/>
+  <ellipse cx="162" cy="136" rx="7" ry="8" fill="#2b2118"/>
+  <path d="M126 162 C140 172 154 172 166 162" fill="none" stroke="#8a5a44" stroke-width="3" stroke-linecap="round"/>
+  
+  
+  <path d="M78 230 C88 196 192 196 202 230 C210 286 70 286 78 230Z" fill="#6d4c41"/>
+  <text x="140" y="328" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#3d4a38">MS</text>
+</svg>

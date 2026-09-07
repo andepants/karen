@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { isEditor } from "@/lib/auth";
 import { extractPeopleFromUrl } from "@/lib/firecrawl";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   if (!(await isEditor())) {
-    return NextResponse.json({ error: "Editor passcode required" }, { status: 401 });
+    return NextResponse.json({ error: "Password required." }, { status: 401 });
   }
 
   const body = (await request.json()) as {

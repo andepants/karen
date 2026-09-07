@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 350" role="img" aria-label="Anton Ruiz">
+  <rect width="280" height="350" fill="#f3ddd6"/>
+  <circle cx="140" cy="138" r="62" fill="#c68642"/>
+  <path d="M78 70 C90 24 190 22 204 72 C176 44 108 44 78 70Z" fill="#1b1b1b"/>
+  <ellipse cx="118" cy="136" rx="7" ry="8" fill="#2b2118"/>
+  <ellipse cx="162" cy="136" rx="7" ry="8" fill="#2b2118"/>
+  <path d="M126 162 C140 172 154 172 166 162" fill="none" stroke="#8a5a44" stroke-width="3" stroke-linecap="round"/>
+  <path d="M96 136 H128 M152 136 H184" fill="none" stroke="#2b2118" stroke-width="3"/><circle cx="118" cy="136" r="16" fill="none" stroke="#2b2118" stroke-width="3"/><circle cx="162" cy="136" r="16" fill="none" stroke="#2b2118" stroke-width="3"/>
+  
+  <path d="M78 230 C88 196 192 196 202 230 C210 286 70 286 78 230Z" fill="#2f4f6f"/>
+  <text x="140" y="328" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#3d4a38">AR</text>
+</svg>

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Cormorant_Garamond, Figtree } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { isEditor } from "@/lib/auth";
+import { ensureDefaultSet } from "@/lib/ensure-test-set";
 import { dueCount } from "@/lib/queue";
 import "./globals.css";
 
@@ -17,20 +19,23 @@ const sans = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "Karen — lily flashcards",
-  description: "Import a website of people and study their faces with spaced repetition.",
+  title: "Karen's Flashcards",
+  description: "Learn every face.",
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({
   children,
-}: LayoutProps<"/">) {
+}: {
+  children: ReactNode;
+}) {
   let editor = false;
   let due = 0;
   try {
     editor = await isEditor();
-    due = await dueCount();
+    const deck = await ensureDefaultSet();
+    due = await dueCount({ setId: deck?.id });
   } catch {
     editor = await isEditor().catch(() => false);
   }

@@ -1,17 +1,8 @@
-import { StudyDeck } from "@/components/study-deck";
-import { dueQueue } from "@/lib/queue";
+import { redirect } from "next/navigation";
+import { ensureDefaultSet } from "@/lib/ensure-test-set";
+import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 
-export default async function StudyPage() {
-  let queue: Awaited<ReturnType<typeof dueQueue>> = [];
-  try {
-    queue = await dueQueue();
-  } catch {
-    queue = [];
-  }
-
-  return (
-    <main className="px-6 py-10">
-      <StudyDeck initial={queue[0] ?? null} remaining={queue.length} />
-    </main>
-  );
+export default async function StudyIndexPage() {
+  const deck = await ensureDefaultSet().catch(() => null);
+  redirect(`/study/${deck?.slug ?? DEFAULT_SET_SLUG}`);
 }
