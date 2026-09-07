@@ -1,4 +1,5 @@
 import { LilyGarden } from "@/components/lily-garden";
+import { KayakScene } from "@/components/kayak-scene";
 import { ImportForm, UnlockForm } from "@/components/import-form";
 import { isEditor } from "@/lib/auth";
 
@@ -24,6 +25,7 @@ export default async function HomePage() {
           {!editor ? <UnlockForm /> : null}
           <ImportForm isEditor={editor} />
         </div>
+        <KayakScene />
       </div>
     </main>
   );
