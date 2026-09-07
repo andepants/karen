@@ -229,6 +229,12 @@
   -webkit-backface-visibility: hidden;
 }
 
+@media (min-width: 640px) {
+  .flashcard-face {
+    border-radius: 2rem;
+  }
+}
+
 .flashcard-back {
   transform: rotateY(180deg);
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   buryCard,
@@ -186,7 +187,7 @@ export function StudyDeck({
         />
       </div>
 
-      <div className="flashcard-scene w-full">
+      <div className="flashcard-scene w-full max-w-lg">
         <div
           role="button"
           tabIndex={0}
@@ -321,11 +322,14 @@ function FacePhoto({
   return (
     <div className="relative h-full w-full">
       {photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={photoUrl}
           alt={labeled ? name : "Person"}
-          className="h-full w-full object-cover object-top"
+          fill
+          sizes="(max-width: 640px) 100vw, 512px"
+          quality={75}
+          className="object-cover object-top"
+          preload
         />
       ) : (
         <div className="flex h-full items-center justify-center bg-secondary font-heading text-7xl">

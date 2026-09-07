@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { LilyMark } from "@/components/lily-garden";
 import { ProfileSwitcher } from "@/components/profile-switcher";
@@ -38,10 +39,14 @@ export function HomeIntro({
             className="intro-face"
             style={{ animationDelay: `${200 + index * 28}ms` }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={face.photoUrl}
               alt={face.name}
+              width={112}
+              height={112}
+              sizes="56px"
+              quality={65}
+              preload={index < 8}
               className="size-12 rounded-full object-cover object-top ring-2 ring-background md:size-14"
             />
           </Link>

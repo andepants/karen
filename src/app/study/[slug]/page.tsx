@@ -15,7 +15,7 @@ export default async function StudySetPage({
   const initial = await studySnapshot({ setId: set.id });
 
   return (
-    <main className="py-6 sm:py-10">
+    <main className="py-6 sm:px-6 sm:py-10">
       <StudyDeck initial={{ ...initial, set }} />
     </main>
   );
