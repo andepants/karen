@@ -211,7 +211,7 @@
   position: relative;
   aspect-ratio: 4 / 5;
   transform-style: preserve-3d;
-  transition: transform 280ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: transform 80ms linear;
 }
 
 .flashcard-inner.is-flipped {

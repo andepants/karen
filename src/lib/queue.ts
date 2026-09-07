@@ -34,9 +34,11 @@ export type StudyCounts = {
 
 export type StudySnapshot = {
   item: StudyItem | null;
+  upcoming: StudyItem[];
   remaining: number;
   counts: StudyCounts;
   intervals: Record<1 | 2 | 3 | 4, string> | null;
+  nextIntervals: Record<1 | 2 | 3 | 4, string> | null;
   canUndo: boolean;
   set: Pick<SetRow, "id" | "slug" | "name" | "description"> | null;
   samplePersonIds: string[];
@@ -367,6 +369,35 @@ function uniquePersonIds(queue: { person: { id: string } }[]) {
   return ids;
 }
 
+function orderedSessionQueue(
+  queue: StudyItem[],
+  samplePersonIds: string[],
+  options: { skipCardId?: string; skipPersonId?: string } = {},
+) {
+  const byPerson = new Map<string, StudyItem>();
+  for (const entry of queue) {
+    if (options.skipCardId && entry.card.id === options.skipCardId) continue;
+    if (options.skipPersonId && entry.person.id === options.skipPersonId) {
+      continue;
+    }
+    if (!byPerson.has(entry.person.id)) {
+      byPerson.set(entry.person.id, entry);
+    }
+  }
+
+  const ordered: StudyItem[] = [];
+  for (const personId of samplePersonIds) {
+    const item = byPerson.get(personId);
+    if (!item) continue;
+    ordered.push(item);
+    byPerson.delete(personId);
+  }
+  for (const item of byPerson.values()) {
+    ordered.push(item);
+  }
+  return ordered;
+}
+
 async function resolveSessionSample(options: {
   setId?: string;
   profileId: string;
@@ -429,14 +460,12 @@ export async function studySnapshot(options: {
         profileId: profile.id,
       })
     : openQueue;
-  const item =
-    queue.find((entry) => {
-      if (options.skipCardId && entry.card.id === options.skipCardId) return false;
-      if (options.skipPersonId && entry.person.id === options.skipPersonId) {
-        return false;
-      }
-      return true;
-    }) ?? null;
+  const sessionQueue = orderedSessionQueue(queue, samplePersonIds, {
+    skipCardId: options.skipCardId,
+    skipPersonId: options.skipPersonId,
+  });
+  const item = sessionQueue[0] ?? null;
+  const upcoming = sessionQueue.slice(1);
   const [counts, grades] = await Promise.all([
     studyCounts({ setId: options.setId, now, profileId: profile.id }),
     rosterGrades(options.setId, now, profile.id),
@@ -458,9 +487,11 @@ export async function studySnapshot(options: {
   }
   return {
     item,
+    upcoming,
     remaining: uniquePeopleCount(queue),
     counts,
     intervals: item ? previewIntervals(item.card, now) : null,
+    nextIntervals: upcoming[0] ? previewIntervals(upcoming[0].card, now) : null,
     canUndo: await canUndoLast(options.setId, profile.id),
     set,
     samplePersonIds,
