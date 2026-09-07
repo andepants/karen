@@ -10,7 +10,6 @@ import {
   weekdayShort,
 } from "./dates";
 import { Rating, State, isInterdayLearning } from "./fsrs";
-import { getStudyPrefs } from "./session-prefs";
 
 export type DayProgress = {
   date: string;
@@ -114,10 +113,13 @@ function longestStreak(dates: string[]) {
   return best;
 }
 
-export async function progressStats(setId: string, now = new Date()) {
+export async function progressStats(
+  setId: string,
+  options: { now?: Date; timeZone?: string } = {},
+) {
   const db = getDb();
-  const prefs = await getStudyPrefs();
-  const timeZone = prefs.timeZone;
+  const now = options.now ?? new Date();
+  const timeZone = options.timeZone || "UTC";
   const today = calendarDate(now, timeZone);
 
   const logs = await db

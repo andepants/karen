@@ -13,13 +13,24 @@ import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 
 export default async function SettingsPage() {
   const editor = await isEditor();
-  const deck = await ensureDefaultSet().catch(() => null);
-  const [stats, progress] = deck
-    ? await Promise.all([
-        studyStats(deck.id).catch(() => null),
-        progressStats(deck.id).catch(() => null),
-      ])
-    : [null, null];
+  const deck = await ensureDefaultSet().catch((error) => {
+    console.error("settings deck", error);
+    return null;
+  });
+  const stats = deck
+    ? await studyStats(deck.id).catch((error) => {
+        console.error("settings stats", error);
+        return null;
+      })
+    : null;
+  const progress = deck
+    ? await progressStats(deck.id, { timeZone: stats?.prefs.timeZone }).catch(
+        (error) => {
+          console.error("settings progress", error);
+          return null;
+        },
+      )
+    : null;
   const gradeCounts = Object.fromEntries(MEMORY_GRADES.map((grade) => [grade, 0])) as Record<
     string,
     number
@@ -50,6 +61,10 @@ export default async function SettingsPage() {
           bonus={stats.prefs.bonus}
           gradeCounts={gradeCounts}
         />
+      ) : stats ? (
+        <p className="text-muted-foreground">
+          Daily history is not available yet. Session settings still work below.
+        </p>
       ) : (
         <p className="text-muted-foreground">The deck is not ready yet.</p>
       )}

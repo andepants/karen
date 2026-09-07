@@ -47,6 +47,7 @@ export function weekdayLong(ymd: string) {
 }
 
 export function formatStudyTime(ms: number) {
+  if (ms <= 0) return "0m";
   const minutes = Math.round(ms / 60_000);
   if (minutes < 1) return "<1m";
   if (minutes < 60) return `${minutes}m`;
