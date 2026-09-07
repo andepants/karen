@@ -149,6 +149,7 @@ export function StudyDeck({
         session={session}
         people={people}
         grades={grades}
+        profileSlug={initial.profileSlug}
         pending={pending}
         onStudyMore={() => {
           if (!initial.set?.id) return;

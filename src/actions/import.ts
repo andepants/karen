@@ -3,10 +3,10 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { cards, people, sets, sources } from "@/db/schema";
+import { people, sets, sources } from "@/db/schema";
 import { requireEditor } from "@/lib/auth";
 import type { ExtractedPerson } from "@/lib/firecrawl";
-import { cardInsertValues } from "@/lib/fsrs";
+import { ensureCardsForPerson } from "@/lib/profiles";
 import { normalizeName } from "@/lib/names";
 import { storePhotoFromUrl } from "@/lib/photos";
 import { uniqueSlug } from "@/lib/sets";
@@ -74,7 +74,7 @@ export async function confirmImport(input: {
       }
     }
 
-    await db.insert(cards).values(cardInsertValues(row.id, now));
+    await ensureCardsForPerson(row.id);
     created += 1;
   }
 

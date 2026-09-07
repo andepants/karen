@@ -9,6 +9,7 @@ import {
   type CardRow,
 } from "./fsrs";
 import { emptyGradeCounts, summarizePeopleGrades, type GradeCounts } from "./grades";
+import { getActiveProfile } from "./profiles";
 import { getStudyPrefs } from "./session-prefs";
 import { roundSize } from "./session-limits";
 import {
@@ -42,6 +43,7 @@ export type StudySnapshot = {
   roundSize: number;
   people: number;
   grades: GradeCounts;
+  profileSlug: string;
 };
 
 export function startOfUtcDay(now = new Date()) {
@@ -54,16 +56,27 @@ export function nextUtcDay(now = new Date()) {
   return new Date(startOfUtcDay(now).getTime() + 86_400_000);
 }
 
-function activeCardFilter(now: Date, setId?: string) {
+async function resolveProfileId(profileId?: string) {
+  if (profileId) return profileId;
+  const profile = await getActiveProfile();
+  return profile.id;
+}
+
+function activeCardFilter(now: Date, setId?: string, profileId?: string) {
   return and(
     eq(people.archived, false),
     eq(cards.suspended, false),
     or(isNull(cards.buriedUntil), lte(cards.buriedUntil, now)),
     setId ? eq(people.setId, setId) : undefined,
+    profileId ? eq(cards.profileId, profileId) : undefined,
   );
 }
 
-async function todayUsage(setId: string | undefined, now: Date) {
+async function todayUsage(
+  setId: string | undefined,
+  now: Date,
+  profileId?: string,
+) {
   const db = getDb();
   const start = startOfUtcDay(now);
   const logs = await db
@@ -79,6 +92,7 @@ async function todayUsage(setId: string | undefined, now: Date) {
       and(
         gte(reviewLogs.reviewedAt, start),
         setId ? eq(people.setId, setId) : undefined,
+        profileId ? eq(cards.profileId, profileId) : undefined,
       ),
     );
 
@@ -111,18 +125,22 @@ async function loadLimits(setId?: string) {
 }
 
 export async function dueQueue(
-  options: { setId?: string; now?: Date; personIds?: string[] } = {},
+  options: { setId?: string; now?: Date; personIds?: string[]; profileId?: string } = {},
 ) {
   const now = options.now ?? new Date();
   const setId = options.setId;
+  const profileId = await resolveProfileId(options.profileId);
   const db = getDb();
   const limits = await loadLimits(setId);
-  const usage = await todayUsage(setId, now);
+  const usage = await todayUsage(setId, now, profileId);
   const remainingNew = Math.max(0, limits.newCardsPerDay - usage.newToday);
   const remainingReviews = Math.max(0, limits.reviewsPerDay - usage.reviewsToday);
   const active = options.personIds?.length
-    ? and(activeCardFilter(now, setId), inArray(people.id, options.personIds))
-    : activeCardFilter(now, setId);
+    ? and(
+        activeCardFilter(now, setId, profileId),
+        inArray(people.id, options.personIds),
+      )
+    : activeCardFilter(now, setId, profileId);
 
   const learning = shuffle(
     await db
@@ -192,11 +210,15 @@ function uniquePeopleCount(queue: { person: { id: string } }[]) {
   return new Set(queue.map((item) => item.person.id)).size;
 }
 
-export async function dueCount(options: { setId?: string; now?: Date } = {}) {
+export async function dueCount(
+  options: { setId?: string; now?: Date; profileId?: string } = {},
+) {
   return uniquePeopleCount(await dueQueue(options));
 }
 
-export async function dueCardCount(options: { setId?: string; now?: Date } = {}) {
+export async function dueCardCount(
+  options: { setId?: string; now?: Date; profileId?: string } = {},
+) {
   return (await dueQueue(options)).length;
 }
 
@@ -222,15 +244,18 @@ export async function isDueCard(
 
   if (row.card.state === State.New) {
     const limits = await loadLimits(options.setId);
-    const usage = await todayUsage(options.setId, now);
+    const usage = await todayUsage(options.setId, now, row.card.profileId ?? undefined);
     return usage.newToday < limits.newCardsPerDay;
   }
 
   return row.card.due <= now;
 }
 
-export async function studyCounts(options: { setId?: string; now?: Date } = {}) {
-  const queue = await dueQueue(options);
+export async function studyCounts(
+  options: { setId?: string; now?: Date; profileId?: string } = {},
+) {
+  const profileId = await resolveProfileId(options.profileId);
+  const queue = await dueQueue({ ...options, profileId });
   const now = options.now ?? new Date();
   const db = getDb();
   const [buried] = await db
@@ -241,6 +266,7 @@ export async function studyCounts(options: { setId?: string; now?: Date } = {}) 
       and(
         eq(people.archived, false),
         eq(cards.suspended, false),
+        eq(cards.profileId, profileId),
         options.setId ? eq(people.setId, options.setId) : undefined,
         sql`${cards.buriedUntil} > ${now}`,
       ),
@@ -254,7 +280,7 @@ export async function studyCounts(options: { setId?: string; now?: Date } = {}) 
     .innerJoin(people, eq(people.id, cards.personId))
     .where(
       and(
-        activeCardFilter(now, options.setId),
+        activeCardFilter(now, options.setId, profileId),
         or(eq(cards.state, State.Learning), eq(cards.state, State.Relearning)),
         sql`${cards.scheduledDays} < 1`,
       ),
@@ -278,28 +304,45 @@ export async function studyCounts(options: { setId?: string; now?: Date } = {}) 
   return counts;
 }
 
-export async function canUndoLast(setId?: string) {
+export async function canUndoLast(setId?: string, profileId?: string) {
+  const scopedProfileId = await resolveProfileId(profileId);
   const db = getDb();
   const [row] = await db
     .select({ id: reviewLogs.id })
     .from(reviewLogs)
     .innerJoin(cards, eq(cards.id, reviewLogs.cardId))
     .innerJoin(people, eq(people.id, cards.personId))
-    .where(setId ? eq(people.setId, setId) : undefined)
+    .where(
+      and(
+        eq(cards.profileId, scopedProfileId),
+        setId ? eq(people.setId, setId) : undefined,
+      ),
+    )
     .orderBy(desc(reviewLogs.reviewedAt))
     .limit(1);
   return Boolean(row);
 }
 
-export async function rosterGrades(setId?: string, now = new Date()) {
+export async function rosterGrades(
+  setId?: string,
+  now = new Date(),
+  profileId?: string,
+) {
   if (!setId) return { people: 0, counts: emptyGradeCounts() };
+  const scopedProfileId = await resolveProfileId(profileId);
   const db = getDb();
   const [roster, personRows] = await Promise.all([
     db
       .select({ card: cards, person: people })
       .from(cards)
       .innerJoin(people, eq(people.id, cards.personId))
-      .where(and(eq(people.setId, setId), eq(people.archived, false))),
+      .where(
+        and(
+          eq(people.setId, setId),
+          eq(people.archived, false),
+          eq(cards.profileId, scopedProfileId),
+        ),
+      ),
     db
       .select({ id: people.id })
       .from(people)
@@ -326,6 +369,7 @@ function uniquePersonIds(queue: { person: { id: string } }[]) {
 
 async function resolveSessionSample(options: {
   setId?: string;
+  profileId: string;
   duePeople: string[];
   requested?: string[];
   persist?: boolean;
@@ -333,7 +377,7 @@ async function resolveSessionSample(options: {
   const prefs = await getStudyPrefs();
   const limit = roundSize(prefs.session);
   const requested = (options.requested ?? []).filter(Boolean);
-  const stored = await getSessionSample(options.setId);
+  const stored = await getSessionSample(options.setId, options.profileId);
   let sample = stored?.personIds ?? (requested.length ? requested : null);
 
   if (!sample) {
@@ -348,7 +392,7 @@ async function resolveSessionSample(options: {
   }
 
   if (options.persist && options.setId) {
-    await writeSessionSample(options.setId, sample);
+    await writeSessionSample(options.setId, sample, options.profileId);
   }
   return sample;
 }
@@ -362,17 +406,28 @@ export async function studySnapshot(options: {
   persistSample?: boolean;
 } = {}): Promise<StudySnapshot> {
   const now = options.now ?? new Date();
+  const profile = await getActiveProfile();
   const prefs = await getStudyPrefs();
   const currentRound = roundSize(prefs.session);
-  const openQueue = await dueQueue({ setId: options.setId, now });
+  const openQueue = await dueQueue({
+    setId: options.setId,
+    now,
+    profileId: profile.id,
+  });
   const samplePersonIds = await resolveSessionSample({
     setId: options.setId,
+    profileId: profile.id,
     duePeople: uniquePersonIds(openQueue),
     requested: options.samplePersonIds,
     persist: options.persistSample,
   });
   const queue = samplePersonIds.length
-    ? await dueQueue({ setId: options.setId, now, personIds: samplePersonIds })
+    ? await dueQueue({
+        setId: options.setId,
+        now,
+        personIds: samplePersonIds,
+        profileId: profile.id,
+      })
     : openQueue;
   const item =
     queue.find((entry) => {
@@ -383,8 +438,8 @@ export async function studySnapshot(options: {
       return true;
     }) ?? null;
   const [counts, grades] = await Promise.all([
-    studyCounts({ setId: options.setId, now }),
-    rosterGrades(options.setId, now),
+    studyCounts({ setId: options.setId, now, profileId: profile.id }),
+    rosterGrades(options.setId, now, profile.id),
   ]);
   let set: StudySnapshot["set"] = null;
   if (options.setId) {
@@ -406,26 +461,34 @@ export async function studySnapshot(options: {
     remaining: uniquePeopleCount(queue),
     counts,
     intervals: item ? previewIntervals(item.card, now) : null,
-    canUndo: await canUndoLast(options.setId),
+    canUndo: await canUndoLast(options.setId, profile.id),
     set,
     samplePersonIds,
     roundSize: currentRound,
     people: grades.people,
     grades: grades.counts,
+    profileSlug: profile.slug,
   };
 }
 
 export async function studyStats(setId: string, now = new Date()) {
   const db = getDb();
+  const profileId = await resolveProfileId();
   const prefs = await getStudyPrefs();
-  const usage = await todayUsage(setId, now);
-  const counts = await studyCounts({ setId, now });
-  const remaining = await dueCount({ setId, now });
+  const usage = await todayUsage(setId, now, profileId);
+  const counts = await studyCounts({ setId, now, profileId });
+  const remaining = await dueCount({ setId, now, profileId });
   const roster = await db
     .select({ card: cards, person: people })
     .from(cards)
     .innerJoin(people, eq(people.id, cards.personId))
-    .where(and(eq(people.setId, setId), eq(people.archived, false)));
+    .where(
+      and(
+        eq(people.setId, setId),
+        eq(people.archived, false),
+        eq(cards.profileId, profileId),
+      ),
+    );
 
   const turnedOff = new Map<string, { id: string; name: string }>();
   for (const row of roster) {

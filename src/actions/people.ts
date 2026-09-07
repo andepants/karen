@@ -3,9 +3,9 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { cards, people } from "@/db/schema";
+import { people } from "@/db/schema";
 import { requireEditor } from "@/lib/auth";
-import { cardInsertValues } from "@/lib/fsrs";
+import { ensureCardsForPerson } from "@/lib/profiles";
 import { normalizeName } from "@/lib/names";
 import { isAllowedPhotoFile, storePhotoFromFile } from "@/lib/photos";
 
@@ -49,7 +49,7 @@ export async function createPerson(formData: FormData) {
     await db.update(people).set({ photoUrl, updatedAt: now }).where(eq(people.id, person.id));
   }
 
-  await db.insert(cards).values(cardInsertValues(person.id, now));
+  await ensureCardsForPerson(person.id);
   refreshPeople();
   return { ok: true as const };
 }

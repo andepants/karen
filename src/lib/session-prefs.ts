@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { isValidTimeZone } from "./dates";
+import { getActiveProfile, updateProfileSettings } from "./profiles";
 import { DEFAULT_SESSION, roundSize } from "./session-limits";
 
 export {
@@ -20,39 +21,59 @@ export type StudyPrefs = {
   timeZone: string;
 };
 
-const DEFAULT_PREFS: StudyPrefs = {
-  session: DEFAULT_SESSION,
-  bonus: 0,
-  burySiblings: true,
-  timeZone: "UTC",
+type CookiePrefs = {
+  bonus?: number;
+  bonusProfileId?: string;
+  timeZone?: string;
 };
 
+const DEFAULT_TIME_ZONE = "UTC";
+
 export async function getStudyPrefs(): Promise<StudyPrefs> {
+  const profile = await getActiveProfile();
   const store = await cookies();
   const raw = store.get(COOKIE)?.value;
-  if (!raw) return DEFAULT_PREFS;
-  try {
-    const parsed = JSON.parse(raw) as Partial<StudyPrefs>;
-    return {
-      session: roundSize(Number(parsed.session) || DEFAULT_PREFS.session),
-      bonus: Math.max(0, Math.round(Number(parsed.bonus) || 0)),
-      burySiblings: Boolean(parsed.burySiblings),
-      timeZone: isValidTimeZone(String(parsed.timeZone || ""))
-        ? String(parsed.timeZone)
-        : DEFAULT_PREFS.timeZone,
-    };
-  } catch {
-    return DEFAULT_PREFS;
+  let cookie: CookiePrefs = {};
+  if (raw) {
+    try {
+      cookie = JSON.parse(raw) as CookiePrefs;
+    } catch {
+      cookie = {};
+    }
   }
+  return {
+    session: roundSize(profile.session || DEFAULT_SESSION),
+    bonus:
+      cookie.bonusProfileId === profile.id
+        ? Math.max(0, Math.round(Number(cookie.bonus) || 0))
+        : 0,
+    burySiblings: profile.burySiblings,
+    timeZone: isValidTimeZone(String(cookie.timeZone || ""))
+      ? String(cookie.timeZone)
+      : DEFAULT_TIME_ZONE,
+  };
 }
 
 export async function writeStudyPrefs(prefs: StudyPrefs) {
-  const store = await cookies();
-  store.set(COOKIE, JSON.stringify(prefs), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
+  const profile = await getActiveProfile();
+  await updateProfileSettings(profile.id, {
+    session: roundSize(prefs.session),
+    burySiblings: prefs.burySiblings,
   });
+  const store = await cookies();
+  store.set(
+    COOKIE,
+    JSON.stringify({
+      bonus: Math.max(0, Math.round(prefs.bonus || 0)),
+      bonusProfileId: profile.id,
+      timeZone: isValidTimeZone(prefs.timeZone) ? prefs.timeZone : DEFAULT_TIME_ZONE,
+    } satisfies CookiePrefs),
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    },
+  );
 }

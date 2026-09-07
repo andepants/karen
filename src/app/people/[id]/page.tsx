@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { PersonFacts } from "@/components/person-facts";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { getDb } from "@/db";
 import { cards, people } from "@/db/schema";
 import { ensureTestSets } from "@/lib/ensure-test-set";
 import { gradeTone, memoryGrade, weakerGrade } from "@/lib/grades";
+import { getActiveProfile, profileHref } from "@/lib/profiles";
 import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 
 export default async function PersonPage({
@@ -20,14 +21,18 @@ export default async function PersonPage({
   const [person] = await db.select().from(people).where(eq(people.id, id)).limit(1);
   if (!person || person.archived) notFound();
 
-  const cardRows = await db.select().from(cards).where(eq(cards.personId, person.id));
+  const profile = await getActiveProfile();
+  const cardRows = await db
+    .select()
+    .from(cards)
+    .where(and(eq(cards.personId, person.id), eq(cards.profileId, profile.id)));
   const letter = weakerGrade(...cardRows.map((card) => memoryGrade(card)));
 
   return (
     <main className="mx-auto max-w-lg px-6 py-10">
       <div className="mb-6 flex items-center justify-between">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/people">Roster</Link>
+          <Link href={profileHref(profile.slug, "/people")}>Roster</Link>
         </Button>
         <span className={`text-sm font-medium ${gradeTone(letter)}`}>{letter}</span>
       </div>
@@ -53,7 +58,9 @@ export default async function PersonPage({
       </div>
       <div className="mt-8 flex gap-3">
         <Button asChild>
-          <Link href={`/study/${DEFAULT_SET_SLUG}`}>Study</Link>
+          <Link href={profileHref(profile.slug, `/study/${DEFAULT_SET_SLUG}`)}>
+            Study
+          </Link>
         </Button>
         {person.profileUrl ? (
           <Button variant="outline" asChild>

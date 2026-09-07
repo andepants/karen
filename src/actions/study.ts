@@ -22,6 +22,7 @@ import {
   type StudySnapshot,
 } from "@/lib/queue";
 import { formatStudyTime } from "@/lib/dates";
+import { getActiveProfile } from "@/lib/profiles";
 import { progressStats } from "@/lib/progress";
 import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
 import { roundSize } from "@/lib/session-limits";
@@ -68,6 +69,7 @@ async function burySiblings(
   personId: string,
   answeredCardId: string,
   now: Date,
+  profileId?: string | null,
 ) {
   const db = getDb();
   await db
@@ -78,6 +80,7 @@ async function burySiblings(
         eq(cards.personId, personId),
         ne(cards.id, answeredCardId),
         eq(cards.suspended, false),
+        profileId ? eq(cards.profileId, profileId) : undefined,
       ),
     );
 }
@@ -150,7 +153,7 @@ export async function rateCard(
     ),
   });
 
-  await burySiblings(row.personId, cardId, now);
+  await burySiblings(row.personId, cardId, now, row.profileId);
   refreshStudy();
 
   const snapshot = await studySnapshot({
@@ -173,13 +176,14 @@ export async function undoLastReview(
   }
 
   await ensureSchema();
+  const profile = await getActiveProfile();
   const db = getDb();
   const [log] = await db
     .select()
     .from(reviewLogs)
     .innerJoin(cards, eq(cards.id, reviewLogs.cardId))
     .innerJoin(people, eq(people.id, cards.personId))
-    .where(eq(people.setId, setId))
+    .where(and(eq(people.setId, setId), eq(cards.profileId, profile.id)))
     .orderBy(desc(reviewLogs.reviewedAt))
     .limit(1);
 
@@ -240,10 +244,16 @@ export async function buryCard(
     await db
       .update(cards)
       .set({ buriedUntil: until })
-      .where(and(eq(cards.personId, row.personId), eq(cards.suspended, false)));
+      .where(
+        and(
+          eq(cards.personId, row.personId),
+          eq(cards.suspended, false),
+          row.profileId ? eq(cards.profileId, row.profileId) : undefined,
+        ),
+      );
   } else {
     await db.update(cards).set({ buriedUntil: until }).where(eq(cards.id, cardId));
-    await burySiblings(row.personId, cardId, new Date());
+    await burySiblings(row.personId, cardId, new Date(), row.profileId);
   }
 
   refreshStudy();
@@ -274,7 +284,12 @@ export async function suspendCard(
     await db
       .update(cards)
       .set({ suspended: true, buriedUntil: null })
-      .where(eq(cards.personId, row.personId));
+      .where(
+        and(
+          eq(cards.personId, row.personId),
+          row.profileId ? eq(cards.profileId, row.profileId) : undefined,
+        ),
+      );
   } else {
     await db
       .update(cards)
@@ -300,9 +315,10 @@ export async function getStudyRecap(setId?: string) {
   if (!setId) return { error: "No deck." };
   await ensureSchema();
   const prefs = await getStudyPrefs();
+  const profile = await getActiveProfile();
   const [progress, grades] = await Promise.all([
-    progressStats(setId, { timeZone: prefs.timeZone }),
-    rosterGrades(setId),
+    progressStats(setId, { timeZone: prefs.timeZone, profileId: profile.id }),
+    rosterGrades(setId, new Date(), profile.id),
   ]);
   const todayRated =
     progress.today.again +
@@ -346,11 +362,12 @@ export async function studyMore(setId: string, extra?: number) {
 
 export async function unsuspendPerson(personId: string) {
   await ensureSchema();
+  const profile = await getActiveProfile();
   const db = getDb();
   await db
     .update(cards)
     .set({ suspended: false, buriedUntil: null })
-    .where(eq(cards.personId, personId));
+    .where(and(eq(cards.personId, personId), eq(cards.profileId, profile.id)));
 
   const [person] = await db
     .select({ setId: people.setId })
@@ -366,12 +383,13 @@ export async function unsuspendPerson(personId: string) {
 }
 
 export async function unburySet(setId: string) {
+  const profile = await getActiveProfile();
   const db = getDb();
   const setCards = await db
     .select({ id: cards.id })
     .from(cards)
     .innerJoin(people, eq(people.id, cards.personId))
-    .where(eq(people.setId, setId));
+    .where(and(eq(people.setId, setId), eq(cards.profileId, profile.id)));
   const ids = setCards.map((card) => card.id);
   if (ids.length) {
     await db.update(cards).set({ buriedUntil: null }).where(inArray(cards.id, ids));

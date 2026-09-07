@@ -5,6 +5,23 @@ export async function ensureSchema() {
   const db = getDb();
 
   await db.execute(sql`
+    create table if not exists profiles (
+      id uuid primary key default gen_random_uuid(),
+      slug text not null unique,
+      name text not null,
+      session integer not null default 10,
+      bury_siblings boolean not null default true,
+      created_at timestamptz not null default now()
+    )
+  `);
+
+  await db.execute(sql`
+    insert into profiles (slug, name)
+    values ('karen', 'Karen')
+    on conflict (slug) do nothing
+  `);
+
+  await db.execute(sql`
     create table if not exists sets (
       id uuid primary key default gen_random_uuid(),
       slug text not null unique,
@@ -49,6 +66,7 @@ export async function ensureSchema() {
   await db.execute(sql`
     create table if not exists cards (
       id uuid primary key default gen_random_uuid(),
+      profile_id uuid references profiles(id) on delete cascade,
       person_id uuid not null references people(id) on delete cascade,
       kind text not null default 'face',
       due timestamptz not null,
@@ -95,6 +113,7 @@ export async function ensureSchema() {
   await db.execute(sql`alter table cards add column if not exists buried_until timestamptz`);
   await db.execute(sql`alter table cards add column if not exists suspended boolean not null default false`);
   await db.execute(sql`alter table cards add column if not exists leech boolean not null default false`);
+  await db.execute(sql`alter table cards add column if not exists profile_id uuid references profiles(id) on delete cascade`);
   await db.execute(sql`alter table review_logs add column if not exists previous_card jsonb`);
   await db.execute(sql`alter table review_logs add column if not exists review_time_ms integer`);
 
@@ -102,7 +121,14 @@ export async function ensureSchema() {
   await db.execute(sql`create index if not exists people_set_id_idx on people (set_id)`);
   await db.execute(sql`create index if not exists cards_due_idx on cards (due)`);
   await db.execute(sql`create index if not exists cards_state_idx on cards (state)`);
+  await db.execute(sql`create index if not exists cards_profile_id_idx on cards (profile_id)`);
   await db.execute(sql`create index if not exists review_logs_reviewed_at_idx on review_logs (reviewed_at)`);
+
+  await db.execute(sql`
+    update cards
+    set profile_id = (select id from profiles where slug = 'karen' limit 1)
+    where profile_id is null
+  `);
 
   await db.execute(sql`
     do $$ begin
@@ -114,10 +140,17 @@ export async function ensureSchema() {
 
   await db.execute(sql`
     do $$ begin
+      alter table cards drop constraint if exists cards_person_kind_idx;
+    exception when undefined_table or undefined_object then null;
+    end $$
+  `);
+
+  await db.execute(sql`
+    do $$ begin
       if not exists (
-        select 1 from pg_constraint where conname = 'cards_person_kind_idx'
+        select 1 from pg_constraint where conname = 'cards_profile_person_kind_idx'
       ) then
-        alter table cards add constraint cards_person_kind_idx unique (person_id, kind);
+        alter table cards add constraint cards_profile_person_kind_idx unique (profile_id, person_id, kind);
       end if;
     exception when duplicate_object or unique_violation then null;
     end $$

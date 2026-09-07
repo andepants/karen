@@ -121,7 +121,7 @@ function longestStreak(dates: string[]) {
 
 export async function progressStats(
   setId: string,
-  options: { now?: Date; timeZone?: string } = {},
+  options: { now?: Date; timeZone?: string; profileId?: string } = {},
 ) {
   const db = getDb();
   const now = options.now ?? new Date();
@@ -142,7 +142,13 @@ export async function progressStats(
     .from(reviewLogs)
     .innerJoin(cards, eq(cards.id, reviewLogs.cardId))
     .innerJoin(people, eq(people.id, cards.personId))
-    .where(and(eq(people.setId, setId), eq(people.archived, false)));
+    .where(
+      and(
+        eq(people.setId, setId),
+        eq(people.archived, false),
+        options.profileId ? eq(cards.profileId, options.profileId) : undefined,
+      ),
+    );
 
   const byDay = new Map<string, DayProgress>();
   const peopleCounts = new Map<string, { name: string; count: number }>();

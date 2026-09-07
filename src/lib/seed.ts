@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { cards, people, reviewLogs, sets } from "@/db/schema";
 import { State, cardInsertValues } from "./fsrs";
 import { normalizeName } from "./names";
+import { DEFAULT_PROFILE_SLUG, ensureBuiltinProfiles, getProfileBySlug } from "./profiles";
 import { RETIRED_SET_SLUGS, seedSets, type SeedSet } from "./seed-data";
 import { factsFor } from "./seed-facts";
 
@@ -101,6 +102,7 @@ async function ensurePersonCards(
   seed: SeedSet,
   setId: string,
   reconcile: boolean,
+  defaultProfileId?: string,
 ) {
   const db = getDb();
   const now = new Date();
@@ -169,9 +171,14 @@ async function ensurePersonCards(
     const existingCards = await db
       .select({ kind: cards.kind })
       .from(cards)
-      .where(eq(cards.personId, personId));
+      .where(
+        and(
+          eq(cards.personId, personId),
+          defaultProfileId ? eq(cards.profileId, defaultProfileId) : undefined,
+        ),
+      );
     const have = new Set(existingCards.map((card) => card.kind));
-    const missing = cardInsertValues(personId, now).filter(
+    const missing = cardInsertValues(personId, now, defaultProfileId).filter(
       (value) => !have.has(value.kind),
     );
     if (missing.length) {
@@ -186,6 +193,8 @@ async function ensurePersonCards(
 export async function ensureSeededSets(options: { reconcile?: boolean } = {}) {
   const reconcile = options.reconcile === true;
   const db = getDb();
+  await ensureBuiltinProfiles();
+  const defaultProfile = await getProfileBySlug(DEFAULT_PROFILE_SLUG);
   await removeRetiredSets();
   if (reconcile) await removeOrphanPeople();
 
@@ -198,6 +207,7 @@ export async function ensureSeededSets(options: { reconcile?: boolean } = {}) {
       seed,
       set.id,
       reconcile,
+      defaultProfile?.id,
     );
 
     if (reconcile && personIds.length && seed.buryNewSiblings === false) {

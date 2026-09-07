@@ -64,10 +64,15 @@ export function emptyCardRow(now = new Date()) {
   return fsrsToRow(createEmptyCard(now));
 }
 
-export function cardInsertValues(personId: string, now = new Date()) {
+export function cardInsertValues(
+  personId: string,
+  now = new Date(),
+  profileId?: string,
+) {
   const empty = emptyCardRow(now);
   return CARD_KINDS.map((kind) => ({
     personId,
+    profileId,
     kind,
     ...empty,
   }));

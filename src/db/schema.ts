@@ -12,6 +12,17 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+export const profiles = pgTable("profiles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  session: integer("session").notNull().default(10),
+  burySiblings: boolean("bury_siblings").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const sets = pgTable("sets", {
   id: uuid("id").defaultRandom().primaryKey(),
   slug: text("slug").notNull().unique(),
@@ -69,6 +80,9 @@ export const cards = pgTable(
   "cards",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    profileId: uuid("profile_id").references(() => profiles.id, {
+      onDelete: "cascade",
+    }),
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id, { onDelete: "cascade" }),
@@ -91,9 +105,14 @@ export const cards = pgTable(
       .notNull(),
   },
   (table) => [
-    unique("cards_person_kind_idx").on(table.personId, table.kind),
+    unique("cards_profile_person_kind_idx").on(
+      table.profileId,
+      table.personId,
+      table.kind,
+    ),
     index("cards_due_idx").on(table.due),
     index("cards_state_idx").on(table.state),
+    index("cards_profile_id_idx").on(table.profileId),
   ],
 );
 

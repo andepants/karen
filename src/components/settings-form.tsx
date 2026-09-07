@@ -6,6 +6,7 @@ import { resetStudyBonus, resetStudyProgress, saveStudySettings } from "@/action
 import { studyMore } from "@/actions/study";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { DEFAULT_PROFILE_SLUG, profileHref } from "@/lib/profile-path";
 import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 import {
   DEFAULT_SESSION,
@@ -19,10 +20,12 @@ export function SettingsForm({
   session,
   burySiblings,
   setId,
+  profileSlug = DEFAULT_PROFILE_SLUG,
 }: {
   session: number;
   burySiblings: boolean;
   setId?: string;
+  profileSlug?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -45,7 +48,7 @@ export function SettingsForm({
       <div>
         <h2 className="font-heading text-3xl">How you study</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          These stay on this browser. They do not change the shared deck.
+          These stay on this profile. Other people keep their own settings.
         </p>
       </div>
       <form
@@ -110,7 +113,7 @@ export function SettingsForm({
             onClick={() =>
               startTransition(async () => {
                 await studyMore(setId);
-                router.push(`/study/${DEFAULT_SET_SLUG}`);
+                router.push(profileHref(profileSlug, `/study/${DEFAULT_SET_SLUG}`));
               })
             }
           >
@@ -135,7 +138,7 @@ export function SettingsForm({
           onClick={() => {
             if (
               !window.confirm(
-                "Clear today’s test reviews and start the deck from scratch?",
+                "Clear this profile’s reviews and start their deck from scratch?",
               )
             ) {
               return;

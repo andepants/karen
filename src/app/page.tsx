@@ -1,13 +1,27 @@
+import { headers } from "next/headers";
 import { HomeIntro } from "@/components/home-intro";
 import { getDb } from "@/db";
 import { people } from "@/db/schema";
 import { ensureDefaultSet } from "@/lib/ensure-test-set";
+import { getActiveProfile, listProfiles, profileHref } from "@/lib/profiles";
 import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
 import { and, eq, isNotNull } from "drizzle-orm";
 
+async function shareOrigin() {
+  const headerStore = await headers();
+  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
+  const proto = headerStore.get("x-forwarded-proto") || "https";
+  return host ? `${proto}://${host}` : undefined;
+}
+
 export default async function HomePage() {
   const deck = await ensureDefaultSet().catch(() => null);
-  const studyHref = deck ? `/study/${deck.slug}` : `/study/${DEFAULT_SET_SLUG}`;
+  const profile = await getActiveProfile();
+  const profiles = await listProfiles();
+  const studyHref = profileHref(
+    profile.slug,
+    deck ? `/study/${deck.slug}` : `/study/${DEFAULT_SET_SLUG}`,
+  );
   let faces: { id: string; name: string; photoUrl: string }[] = [];
   try {
     const db = getDb();
@@ -28,5 +42,13 @@ export default async function HomePage() {
     faces = [];
   }
 
-  return <HomeIntro href={studyHref} faces={faces} />;
+  return (
+    <HomeIntro
+      href={studyHref}
+      faces={faces}
+      profiles={profiles}
+      activeSlug={profile.slug}
+      shareOrigin={await shareOrigin()}
+    />
+  );
 }

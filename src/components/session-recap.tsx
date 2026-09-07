@@ -7,6 +7,7 @@ import { GradeStrip } from "@/components/memory-grades";
 import { Button } from "@/components/ui/button";
 import { formatStudyTime } from "@/lib/dates";
 import type { GradeCounts } from "@/lib/grades";
+import { DEFAULT_PROFILE_SLUG, profileHref } from "@/lib/profile-path";
 
 export type SessionScore = {
   again: number;
@@ -55,6 +56,7 @@ export function SessionRecap({
   grades,
   pending,
   onStudyMore,
+  profileSlug = DEFAULT_PROFILE_SLUG,
 }: {
   setName: string;
   setId?: string;
@@ -63,6 +65,7 @@ export function SessionRecap({
   grades: GradeCounts;
   pending: boolean;
   onStudyMore: () => void;
+  profileSlug?: string;
 }) {
   const [today, setToday] = useState<Awaited<ReturnType<typeof getStudyRecap>> | null>(
     null,
@@ -153,7 +156,7 @@ export function SessionRecap({
           </Button>
         ) : null}
         <Button variant="outline" asChild>
-          <Link href="/settings">Options</Link>
+          <Link href={profileHref(profileSlug, "/settings")}>Options</Link>
         </Button>
       </div>
     </div>

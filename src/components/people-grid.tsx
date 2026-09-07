@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { gradeTone, type MemoryGrade } from "@/lib/grades";
+import { DEFAULT_PROFILE_SLUG, profileHref } from "@/lib/profile-path";
 import type { people as peopleTable, sets as setsTable } from "@/db/schema";
 
 type Person = typeof peopleTable.$inferSelect;
@@ -31,11 +32,13 @@ export function PeopleGrid({
   sets,
   isEditor,
   grades,
+  profileSlug = DEFAULT_PROFILE_SLUG,
 }: {
   people: Person[];
   sets: SetRow[];
   isEditor: boolean;
   grades: Record<string, MemoryGrade>;
+  profileSlug?: string;
 }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -47,6 +50,7 @@ export function PeopleGrid({
           sets={sets}
           isEditor={isEditor}
           grade={grades[person.id] ?? "—"}
+          profileSlug={profileSlug}
         />
       ))}
     </div>
@@ -69,16 +73,18 @@ function PersonCard({
   sets,
   isEditor,
   grade,
+  profileSlug,
 }: {
   person: Person;
   sets: SetRow[];
   isEditor: boolean;
   grade: MemoryGrade;
+  profileSlug: string;
 }) {
   return (
     <Card className={person.archived ? "opacity-60" : "bg-card/90"}>
       <CardContent className="space-y-2 p-3">
-        <Link href={`/people/${person.id}`} className="block">
+        <Link href={profileHref(profileSlug, `/people/${person.id}`)} className="block">
           {person.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
