@@ -8,21 +8,25 @@ import { and, eq, isNotNull } from "drizzle-orm";
 export default async function HomePage() {
   const deck = await ensureDefaultSet().catch(() => null);
   const studyHref = deck ? `/study/${deck.slug}` : `/study/${DEFAULT_SET_SLUG}`;
-  let photos: string[] = [];
+  let faces: { id: string; name: string; photoUrl: string }[] = [];
   try {
     const db = getDb();
     const rows = await db
-      .select({ photoUrl: people.photoUrl })
+      .select({
+        id: people.id,
+        name: people.name,
+        photoUrl: people.photoUrl,
+      })
       .from(people)
       .where(and(eq(people.archived, false), isNotNull(people.photoUrl)));
-    photos = rows
-      .map((row) => row.photoUrl)
-      .filter((src): src is string => Boolean(src))
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 8);
+    faces = rows
+      .filter((row): row is { id: string; name: string; photoUrl: string } =>
+        Boolean(row.photoUrl),
+      )
+      .sort(() => Math.random() - 0.5);
   } catch {
-    photos = [];
+    faces = [];
   }
 
-  return <HomeIntro href={studyHref} photos={photos} />;
+  return <HomeIntro href={studyHref} faces={faces} />;
 }

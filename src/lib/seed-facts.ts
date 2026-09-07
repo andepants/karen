@@ -30,6 +30,7 @@ export const SEED_FACTS: Record<string, { title: string; facts: string[] }> = {
       "Won the Helen Lansman Award for compassion toward patients.",
       "Practiced in Salt Lake City for five years before moving to Texas.",
       "Has a special interest in infertility care.",
+      "Enjoys skiing, hiking, and water sports.",
     ],
   },
   "Robert Cowan, MD": {
@@ -93,6 +94,7 @@ export const SEED_FACTS: Record<string, { title: string; facts: string[] }> = {
       "Treats women of all ages.",
       "Has particular interests in adolescent gynecology, infertility, and gynecologic surgery.",
       "Returned to Austin with her family in the spring of 2020.",
+      "Enjoys being outdoors and on the water.",
     ],
   },
   "Samantha Hull, MD": {
@@ -125,6 +127,7 @@ export const SEED_FACTS: Record<string, { title: string; facts: string[] }> = {
       "Completed residency at the University of Oklahoma.",
       "Served as section head of OB-GYN at Northwest Medical Center in Tucson.",
       "Completed a fellowship in integrative medicine with Andrew Weil, MD.",
+      "Looks forward to golf, hiking, and watersports when she has free time.",
     ],
   },
   "Mimi Rogers, MD": {
