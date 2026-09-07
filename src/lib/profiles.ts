@@ -21,28 +21,30 @@ export {
   DEFAULT_PROFILE_NAME,
   DEFAULT_PROFILE_SLUG,
   NUMBERED_PROFILE_MAX,
+  isValidProfileSlug,
   profileHref,
 } from "./profile-path";
 
+async function prunePresetProfiles() {
+  const db = getDb();
+  const rows = await db.select({ id: profiles.id, slug: profiles.slug }).from(profiles);
+  const extras = rows.filter(
+    (row) =>
+      row.slug !== DEFAULT_PROFILE_SLUG &&
+      (isNumberedProfileSlug(row.slug) || row.slug === "pat"),
+  );
+  for (const row of extras) {
+    await db.delete(profiles).where(eq(profiles.id, row.id));
+  }
+}
+
 export async function ensureBuiltinProfiles() {
   const db = getDb();
-  const wanted = [
-    { slug: DEFAULT_PROFILE_SLUG, name: DEFAULT_PROFILE_NAME },
-    ...Array.from({ length: NUMBERED_PROFILE_MAX }, (_, index) => {
-      const slug = String(index + 1);
-      return { slug, name: slug };
-    }),
-  ];
-  const existing = await db
-    .select({ slug: profiles.slug })
-    .from(profiles);
-  const have = new Set(existing.map((row) => row.slug));
-  const missing = wanted.filter((row) => !have.has(row.slug));
-  if (missing.length) {
-    await db.insert(profiles).values(missing).onConflictDoNothing({
-      target: profiles.slug,
-    });
-  }
+  await db
+    .insert(profiles)
+    .values({ slug: DEFAULT_PROFILE_SLUG, name: DEFAULT_PROFILE_NAME })
+    .onConflictDoNothing({ target: profiles.slug });
+  await prunePresetProfiles();
 }
 
 export async function listProfiles() {
@@ -94,20 +96,6 @@ export async function resolveProfile(slug = DEFAULT_PROFILE_SLUG) {
     await ensureProfileCards(existing.id);
     return existing;
   }
-  if (isNumberedProfileSlug(normalized)) {
-    const db = getDb();
-    const [created] = await db
-      .insert(profiles)
-      .values({ slug: normalized, name: normalized })
-      .onConflictDoNothing({ target: profiles.slug })
-      .returning();
-    const row = created ?? (await getProfileBySlug(normalized));
-    if (!row) {
-      return getProfileBySlug(DEFAULT_PROFILE_SLUG).then((fallback) => fallback!);
-    }
-    await ensureProfileCards(row.id);
-    return row;
-  }
   return getProfileBySlug(DEFAULT_PROFILE_SLUG).then((row) => row!);
 }
 
@@ -120,8 +108,8 @@ export async function createNamedProfile(rawName: string) {
   const name = rawName.trim().replace(/\s+/g, " ").slice(0, 40);
   if (name.length < 1) return { ok: false as const, error: "Name is required." };
   const base = slugFromName(name);
-  if (!isValidProfileSlug(base)) {
-    return { ok: false as const, error: "Use letters or numbers in the name." };
+  if (!isValidProfileSlug(base) || isNumberedProfileSlug(base)) {
+    return { ok: false as const, error: "Use a name, not a reserved number." };
   }
   const db = getDb();
   let slug = base;

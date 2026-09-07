@@ -90,8 +90,8 @@ export function ProfileSwitcher({
           <DialogHeader>
             <DialogTitle>Add a profile</DialogTitle>
             <DialogDescription>
-              Just a name. Each person gets their own progress, grades, and
-              session settings. Send them <code>/p/their-name</code>.
+              Just a name. That creates a shareable desk at{" "}
+              <code>/p/their-name</code> with its own progress and settings.
             </DialogDescription>
           </DialogHeader>
           <form

@@ -422,6 +422,47 @@ export const SEED_FACTS: Record<string, { title: string; facts: string[] }> = {
       "BioTE certified, with a special interest in hormone optimization.",
     ],
   },
+  "Jinous Rouhani": {
+    title: "CEO",
+    facts: [
+      "Chief Executive Officer of Austin Area OBGYN & Fertility.",
+      "Leads the practice’s administration and operations.",
+    ],
+  },
+  "Mindy Ondrasek": {
+    title: "Director of Finance",
+    facts: ["Director of Finance at Austin Area OBGYN & Fertility."],
+  },
+  "Angila Chapmond": {
+    title: "Director of HR & Operations",
+    facts: ["Director of HR & Operations at Austin Area OBGYN & Fertility."],
+  },
+  "Leslie King, SHRM-CP": {
+    title: "Senior Human Resources Manager",
+    facts: [
+      "Senior Human Resources Manager at Austin Area OBGYN & Fertility.",
+      "Holds the SHRM-CP credential.",
+    ],
+  },
+  "Pamela Valdez": {
+    title: "Controller",
+    facts: ["Controller at Austin Area OBGYN & Fertility."],
+  },
+  "Cori Mabry": {
+    title: "IT Operations Manager",
+    facts: ["IT Operations Manager at Austin Area OBGYN & Fertility."],
+  },
+  "Misty Underwood": {
+    title: "Clinical Manager",
+    facts: ["Clinical Manager at Austin Area OBGYN & Fertility."],
+  },
+  "Stacey Cromwell, BSN, RN": {
+    title: "Head of Patient Operations",
+    facts: [
+      "Head of Patient Operations at Austin Area OBGYN & Fertility.",
+      "Holds a BSN and is a registered nurse.",
+    ],
+  },
 };
 
 export function factsFor(name: string) {

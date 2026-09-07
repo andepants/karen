@@ -186,7 +186,7 @@ export function StudyDeck({
         />
       </div>
 
-      <div className="flashcard-scene w-full max-w-lg">
+      <div className="flashcard-scene w-full">
         <div
           role="button"
           tabIndex={0}

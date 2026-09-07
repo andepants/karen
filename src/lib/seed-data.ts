@@ -26,7 +26,7 @@ export const seedSets: SeedSet[] = [
   {
     slug: DEFAULT_SET_SLUG,
     name: "Austin Area OBGYN",
-    description: "The Austin Area OBGYN team.",
+    description: "Providers and leadership at Austin Area OBGYN.",
     newCardsPerDay: 10,
     buryNewSiblings: true,
     buryReviewSiblings: true,
@@ -270,6 +270,95 @@ export const seedSets: SeedSet[] = [
         description: "Advanced Practitioner\n\nAudra Wolfe is an experienced, board-certified nurse practitioner who joined Dr. Akin’s team in 2020. She graduated from the University of Texas at Austin with her Bachelor of Science in Nursing. Audra went on to work in the neonatal intensive care unit and emergency department before returning to Texas Tech to receive her Master of Science in Nursing. Audra is a native Texan and has lived in Austin for over 12 years.\n\nShe is a member of the American Association of Nurse Practitioners and is board-certified by the American Academy of Nurse Practitioners. Audra believes in partnering with patients and promoting health and wellness across the lifespan. She is focused on providing patient-centered care. She has a special interest in hormone optimization and is a bioTE certified practitioner.\n\nOutside the office, Audra stays active on her peloton bike and enjoys walking town lake. She also enjoys exploring the Austin culinary scene and traveling with her husband and daughter.",
         photoUrl: "https://aaobgyn.com/wp-content/uploads/2024/08/Audra-Wolfe-NP.png",
         profileUrl: "https://aaobgyn.com/provider-bio/audra-wolfe/",
+      },
+      {
+        name: "Jinous Rouhani",
+        description:
+          "Leadership\n\nJinous Rouhani is the Chief Executive Officer of Austin Area OBGYN & Fertility.",
+        title: "CEO",
+        facts: [
+          "Chief Executive Officer of Austin Area OBGYN & Fertility.",
+          "Leads the practice’s administration and operations.",
+        ],
+        photoUrl:
+          "https://aaobgyn.com/wp-content/uploads/2026/06/Jinous_Rouhani-3919-Retouched-BKG-scaled.jpg",
+        profileUrl: "https://aaobgyn.com/leadership/",
+      },
+      {
+        name: "Mindy Ondrasek",
+        description:
+          "Leadership\n\nMindy Ondrasek is the Director of Finance at Austin Area OBGYN & Fertility.",
+        title: "Director of Finance",
+        facts: ["Director of Finance at Austin Area OBGYN & Fertility."],
+        photoUrl:
+          "https://aaobgyn.com/wp-content/uploads/2026/06/Ondrasek_Mindy_303-35-Retouched-scaled.jpg",
+        profileUrl: "https://aaobgyn.com/leadership/",
+      },
+      {
+        name: "Angila Chapmond",
+        description:
+          "Leadership\n\nAngila Chapmond is the Director of HR & Operations at Austin Area OBGYN & Fertility.",
+        title: "Director of HR & Operations",
+        facts: ["Director of HR & Operations at Austin Area OBGYN & Fertility."],
+        photoUrl:
+          "https://aaobgyn.com/wp-content/uploads/2026/06/Chapmond_Angile_089-207-Retouched-scaled.jpg",
+        profileUrl: "https://aaobgyn.com/leadership/",
+      },
+      {
+        name: "Leslie King, SHRM-CP",
+        description:
+          "Leadership\n\nLeslie King is the Senior Human Resources Manager at Austin Area OBGYN & Fertility.",
+        title: "Senior Human Resources Manager",
+        facts: [
+          "Senior Human Resources Manager at Austin Area OBGYN & Fertility.",
+          "Holds the SHRM-CP credential.",
+        ],
+        photoUrl:
+          "https://aaobgyn.com/wp-content/uploads/2026/06/Leslie_King-7520-Retouched-1-1.jpg",
+        profileUrl: "https://aaobgyn.com/leadership/",
+      },
+      {
+        name: "Pamela Valdez",
+        description:
+          "Leadership\n\nPamela Valdez is the Controller at Austin Area OBGYN & Fertility.",
+        title: "Controller",
+        facts: ["Controller at Austin Area OBGYN & Fertility."],
+        photoUrl:
+          "https://aaobgyn.com/wp-content/uploads/2026/06/Valdez_Pamela_348-58-Retouched-scaled.jpg",
+        profileUrl: "https://aaobgyn.com/leadership/",
+      },
+      {
+        name: "Cori Mabry",
+        description:
+          "Leadership\n\nCori Mabry is the IT Operations Manager at Austin Area OBGYN & Fertility.",
+        title: "IT Operations Manager",
+        facts: ["IT Operations Manager at Austin Area OBGYN & Fertility."],
+        photoUrl:
+          "https://aaobgyn.com/wp-content/uploads/2026/06/cori-mabry-headshot.png",
+        profileUrl: "https://aaobgyn.com/leadership/",
+      },
+      {
+        name: "Misty Underwood",
+        description:
+          "Leadership\n\nMisty Underwood is the Clinical Manager at Austin Area OBGYN & Fertility.",
+        title: "Clinical Manager",
+        facts: ["Clinical Manager at Austin Area OBGYN & Fertility."],
+        photoUrl:
+          "https://aaobgyn.com/wp-content/uploads/2026/06/misty-underwood-headshot.png",
+        profileUrl: "https://aaobgyn.com/leadership/",
+      },
+      {
+        name: "Stacey Cromwell, BSN, RN",
+        description:
+          "Leadership\n\nStacey Cromwell is the Head of Patient Operations at Austin Area OBGYN & Fertility.",
+        title: "Head of Patient Operations",
+        facts: [
+          "Head of Patient Operations at Austin Area OBGYN & Fertility.",
+          "Holds a BSN and is a registered nurse.",
+        ],
+        photoUrl:
+          "https://aaobgyn.com/wp-content/uploads/2026/06/Cromwell_Stacey_691-23-Retouched-scaled.jpg",
+        profileUrl: "https://aaobgyn.com/leadership/",
       },
     ],
   },
