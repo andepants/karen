@@ -1,8 +1,9 @@
-import { getDb } from "@/db";
 import { sql } from "drizzle-orm";
+import { getDb } from "@/db";
 
 export async function ensureSchema() {
   const db = getDb();
+
   await db.execute(sql`
     create table if not exists sets (
       id uuid primary key default gen_random_uuid(),
@@ -17,6 +18,73 @@ export async function ensureSchema() {
     )
   `);
 
+  await db.execute(sql`
+    create table if not exists sources (
+      id uuid primary key default gen_random_uuid(),
+      set_id uuid references sets(id) on delete set null,
+      url text not null,
+      title text,
+      created_at timestamptz not null default now()
+    )
+  `);
+
+  await db.execute(sql`
+    create table if not exists people (
+      id uuid primary key default gen_random_uuid(),
+      set_id uuid references sets(id) on delete set null,
+      source_id uuid references sources(id) on delete set null,
+      name text not null,
+      normalized_name text not null,
+      description text not null default '',
+      photo_url text,
+      profile_url text,
+      archived boolean not null default false,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `);
+
+  await db.execute(sql`
+    create table if not exists cards (
+      id uuid primary key default gen_random_uuid(),
+      person_id uuid not null references people(id) on delete cascade,
+      kind text not null default 'face',
+      due timestamptz not null,
+      stability real not null,
+      difficulty real not null,
+      elapsed_days real not null,
+      scheduled_days real not null,
+      learning_steps integer not null,
+      reps integer not null,
+      lapses integer not null,
+      state integer not null,
+      last_review timestamptz,
+      buried_until timestamptz,
+      suspended boolean not null default false,
+      leech boolean not null default false,
+      created_at timestamptz not null default now()
+    )
+  `);
+
+  await db.execute(sql`
+    create table if not exists review_logs (
+      id uuid primary key default gen_random_uuid(),
+      card_id uuid not null references cards(id) on delete cascade,
+      rating integer not null,
+      state integer not null,
+      due timestamptz not null,
+      stability real not null,
+      difficulty real not null,
+      elapsed_days real not null,
+      last_elapsed_days real not null,
+      scheduled_days real not null,
+      learning_steps integer not null,
+      reviewed_at timestamptz not null,
+      previous_card jsonb,
+      review_time_ms integer
+    )
+  `);
+
   await db.execute(sql`alter table sources add column if not exists set_id uuid references sets(id) on delete set null`);
   await db.execute(sql`alter table people add column if not exists set_id uuid references sets(id) on delete set null`);
   await db.execute(sql`alter table cards add column if not exists kind text not null default 'face'`);
@@ -26,33 +94,28 @@ export async function ensureSchema() {
   await db.execute(sql`alter table review_logs add column if not exists previous_card jsonb`);
   await db.execute(sql`alter table review_logs add column if not exists review_time_ms integer`);
 
+  await db.execute(sql`create index if not exists people_normalized_name_idx on people (normalized_name)`);
+  await db.execute(sql`create index if not exists people_set_id_idx on people (set_id)`);
+  await db.execute(sql`create index if not exists cards_due_idx on cards (due)`);
+  await db.execute(sql`create index if not exists cards_state_idx on cards (state)`);
+  await db.execute(sql`create index if not exists review_logs_reviewed_at_idx on review_logs (reviewed_at)`);
+
   await db.execute(sql`
     do $$ begin
-      if exists (
-        select 1 from pg_constraint
-        where conrelid = 'cards'::regclass
-          and contype = 'u'
-          and pg_get_constraintdef(oid) like '%person_id%'
-          and pg_get_constraintdef(oid) not like '%kind%'
-      ) then
-        alter table cards drop constraint if exists cards_person_id_unique;
-        alter table cards drop constraint if exists cards_person_id_key;
-      end if;
-    exception when undefined_table then null;
+      alter table cards drop constraint if exists cards_person_id_unique;
+      alter table cards drop constraint if exists cards_person_id_key;
+    exception when undefined_table or undefined_object then null;
     end $$
   `);
 
   await db.execute(sql`
     do $$ begin
       if not exists (
-        select 1 from pg_constraint
-        where conname = 'cards_person_kind_idx'
+        select 1 from pg_constraint where conname = 'cards_person_kind_idx'
       ) then
         alter table cards add constraint cards_person_kind_idx unique (person_id, kind);
       end if;
-    exception when duplicate_object then null;
+    exception when duplicate_object or unique_violation then null;
     end $$
   `);
-
-  await db.execute(sql`create index if not exists people_set_id_idx on people (set_id)`);
 }
