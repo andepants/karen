@@ -1,22 +1,125 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { cards, reviewLogs } from "@/db/schema";
-import { fsrsToRow, isGrade, rowToFsrs, scheduler } from "@/lib/fsrs";
-import { dueQueue } from "@/lib/queue";
+import { cards, people, reviewLogs, sets } from "@/db/schema";
+import {
+  LEECH_THRESHOLD,
+  MAX_ANSWER_SECONDS,
+  State,
+  fsrsToRow,
+  isGrade,
+  rowToFsrs,
+  scheduler,
+} from "@/lib/fsrs";
+import { ensureSchema } from "@/lib/ensure-schema";
+import {
+  isDueCard,
+  nextUtcDay,
+  studySnapshot,
+  type StudySnapshot,
+} from "@/lib/queue";
+import { formatStudyTime } from "@/lib/dates";
+import { progressStats } from "@/lib/progress";
+import { getStudyPrefs, writeStudyPrefs } from "@/lib/session-prefs";
 
-export async function getNextCard() {
-  const queue = await dueQueue();
-  return queue[0] ?? null;
+function refreshStudy() {
+  revalidatePath("/study");
+  revalidatePath("/sets");
+  revalidatePath("/people");
+  revalidatePath("/settings");
+  revalidatePath("/");
 }
 
-export async function rateCard(cardId: string, rating: number) {
+function snapshotFromRow(row: typeof cards.$inferSelect) {
+  return {
+    due: row.due.toISOString(),
+    stability: row.stability,
+    difficulty: row.difficulty,
+    elapsedDays: row.elapsedDays,
+    scheduledDays: row.scheduledDays,
+    learningSteps: row.learningSteps,
+    reps: row.reps,
+    lapses: row.lapses,
+    state: row.state,
+    lastReview: row.lastReview?.toISOString() ?? null,
+    buriedUntil: row.buriedUntil?.toISOString() ?? null,
+    suspended: row.suspended,
+    leech: row.leech,
+  };
+}
+
+async function loadCardSetId(cardId: string) {
+  const db = getDb();
+  const [row] = await db
+    .select({ setId: people.setId })
+    .from(cards)
+    .innerJoin(people, eq(people.id, cards.personId))
+    .where(eq(cards.id, cardId))
+    .limit(1);
+  return row?.setId ?? undefined;
+}
+
+async function burySiblings(
+  personId: string,
+  answeredCardId: string,
+  now: Date,
+) {
+  const db = getDb();
+  const [person] = await db
+    .select({ setId: people.setId })
+    .from(people)
+    .where(eq(people.id, personId))
+    .limit(1);
+  if (!person?.setId) return;
+
+  const [set] = await db.select().from(sets).where(eq(sets.id, person.setId)).limit(1);
+  if (!set) return;
+
+  const prefs = await getStudyPrefs();
+  const buryNew = prefs.burySiblings || set.buryNewSiblings;
+  const buryReview = prefs.burySiblings || set.buryReviewSiblings;
+  if (!buryNew && !buryReview) return;
+
+  const siblings = await db
+    .select()
+    .from(cards)
+    .where(eq(cards.personId, personId));
+
+  const until = nextUtcDay(now);
+  const ids = siblings
+    .filter((sibling) => {
+      if (sibling.id === answeredCardId) return false;
+      if (sibling.suspended) return false;
+      if (sibling.state === State.Learning || sibling.state === State.Relearning) {
+        if (sibling.scheduledDays < 1) return false;
+        return buryReview;
+      }
+      if (sibling.state === State.New) return buryNew;
+      return buryReview;
+    })
+    .map((sibling) => sibling.id);
+
+  if (ids.length) {
+    await db.update(cards).set({ buriedUntil: until }).where(inArray(cards.id, ids));
+  }
+}
+
+export async function getStudyState(setId?: string): Promise<StudySnapshot> {
+  return studySnapshot({ setId });
+}
+
+export async function rateCard(
+  cardId: string,
+  rating: number,
+  reviewTimeMs?: number,
+) {
   if (!isGrade(rating)) {
     return { error: "Invalid rating." };
   }
 
+  await ensureSchema();
   const db = getDb();
   const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
   if (!row) {
@@ -24,10 +127,22 @@ export async function rateCard(cardId: string, rating: number) {
   }
 
   const now = new Date();
+  const setIdForCard = await loadCardSetId(cardId);
+  if (!(await isDueCard(cardId, { setId: setIdForCard, now }))) {
+    return { error: "Card is not due." };
+  }
   const result = scheduler.next(rowToFsrs(row), now, rating);
   const next = fsrsToRow(result.card);
+  const leech = next.lapses >= LEECH_THRESHOLD;
 
-  await db.update(cards).set(next).where(eq(cards.id, cardId));
+  await db
+    .update(cards)
+    .set({
+      ...next,
+      leech,
+    })
+    .where(eq(cards.id, cardId));
+
   await db.insert(reviewLogs).values({
     cardId,
     rating: result.log.rating,
@@ -40,14 +155,192 @@ export async function rateCard(cardId: string, rating: number) {
     scheduledDays: result.log.scheduled_days,
     learningSteps: result.log.learning_steps,
     reviewedAt: result.log.review,
+    previousCard: snapshotFromRow(row),
+    reviewTimeMs: Math.min(
+      MAX_ANSWER_SECONDS * 1000,
+      Math.max(0, reviewTimeMs ?? 0),
+    ),
   });
 
-  revalidatePath("/study");
-  revalidatePath("/");
-  const queue = await dueQueue(now);
+  await burySiblings(row.personId, cardId, now);
+  refreshStudy();
+
+  const snapshot = await studySnapshot({
+    setId: setIdForCard,
+    now,
+    skipCardId: cardId,
+  });
+  return { ok: true as const, leech, ...snapshot };
+}
+
+export async function undoLastReview(setId?: string) {
+  if (!setId) {
+    return { error: "Nothing to undo." };
+  }
+
+  await ensureSchema();
+  const db = getDb();
+  const [log] = await db
+    .select()
+    .from(reviewLogs)
+    .innerJoin(cards, eq(cards.id, reviewLogs.cardId))
+    .innerJoin(people, eq(people.id, cards.personId))
+    .where(eq(people.setId, setId))
+    .orderBy(desc(reviewLogs.reviewedAt))
+    .limit(1);
+
+  if (!log) {
+    return { error: "Nothing to undo." };
+  }
+
+  const previous = log.review_logs.previousCard;
+  if (!previous) {
+    return { error: "That review cannot be undone." };
+  }
+
+  await db
+    .update(cards)
+    .set({
+      due: new Date(String(previous.due)),
+      stability: Number(previous.stability),
+      difficulty: Number(previous.difficulty),
+      elapsedDays: Number(previous.elapsedDays),
+      scheduledDays: Number(previous.scheduledDays),
+      learningSteps: Number(previous.learningSteps),
+      reps: Number(previous.reps),
+      lapses: Number(previous.lapses),
+      state: Number(previous.state),
+      lastReview: previous.lastReview ? new Date(String(previous.lastReview)) : null,
+      buriedUntil: previous.buriedUntil
+        ? new Date(String(previous.buriedUntil))
+        : null,
+      suspended: Boolean(previous.suspended),
+      leech: Boolean(previous.leech),
+    })
+    .where(eq(cards.id, log.review_logs.cardId));
+
+  await db.delete(reviewLogs).where(eq(reviewLogs.id, log.review_logs.id));
+  refreshStudy();
+  return { ok: true as const, ...(await studySnapshot({ setId })) };
+}
+
+export async function buryCard(cardId: string, scope: "card" | "note" = "card") {
+  await ensureSchema();
+  const db = getDb();
+  const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
+  if (!row) return { error: "Card not found." };
+
+  const until = nextUtcDay();
+  if (scope === "note") {
+    await db
+      .update(cards)
+      .set({ buriedUntil: until })
+      .where(and(eq(cards.personId, row.personId), eq(cards.suspended, false)));
+  } else {
+    await db.update(cards).set({ buriedUntil: until }).where(eq(cards.id, cardId));
+  }
+
+  refreshStudy();
+  const setId = await loadCardSetId(cardId);
+  return { ok: true as const, ...(await studySnapshot({ setId, skipCardId: cardId })) };
+}
+
+export async function suspendCard(cardId: string, scope: "card" | "note" = "card") {
+  await ensureSchema();
+  const db = getDb();
+  const [row] = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
+  if (!row) return { error: "Card not found." };
+
+  if (scope === "note") {
+    await db
+      .update(cards)
+      .set({ suspended: true, buriedUntil: null })
+      .where(eq(cards.personId, row.personId));
+  } else {
+    await db
+      .update(cards)
+      .set({ suspended: true, buriedUntil: null })
+      .where(eq(cards.id, cardId));
+  }
+
+  refreshStudy();
+  const setId = await loadCardSetId(cardId);
+  return { ok: true as const, ...(await studySnapshot({ setId, skipCardId: cardId })) };
+}
+
+export async function getStudyRecap(setId?: string) {
+  if (!setId) return { error: "No deck." };
+  await ensureSchema();
+  const prefs = await getStudyPrefs();
+  const progress = await progressStats(setId, { timeZone: prefs.timeZone });
+  const todayRated =
+    progress.today.again +
+    progress.today.hard +
+    progress.today.good +
+    progress.today.easy;
   return {
     ok: true as const,
-    remaining: queue.length,
-    item: queue[0] ?? null,
+    todayCount: progress.today.count,
+    todayNew: progress.today.newCount,
+    todayReview: progress.today.reviewCount,
+    todayTime: formatStudyTime(progress.today.timeMs),
+    todayRatings: {
+      again: progress.today.again,
+      hard: progress.today.hard,
+      good: progress.today.good,
+      easy: progress.today.easy,
+    },
+    rememberedPct: todayRated
+      ? Math.round(((progress.today.good + progress.today.easy) / todayRated) * 100)
+      : 0,
+    streak: progress.streak,
   };
+}
+
+export async function studyMore(setId: string, extra?: number) {
+  await ensureSchema();
+  const prefs = await getStudyPrefs();
+  await writeStudyPrefs({
+    ...prefs,
+    bonus: prefs.bonus + Math.max(prefs.session, extra ?? prefs.session),
+  });
+  await unburySet(setId);
+  refreshStudy();
+  return { ok: true as const, ...(await studySnapshot({ setId })) };
+}
+
+export async function unsuspendPerson(personId: string) {
+  await ensureSchema();
+  const db = getDb();
+  await db
+    .update(cards)
+    .set({ suspended: false, buriedUntil: null })
+    .where(eq(cards.personId, personId));
+
+  const [person] = await db
+    .select({ setId: people.setId })
+    .from(people)
+    .where(eq(people.id, personId))
+    .limit(1);
+
+  refreshStudy();
+  return {
+    ok: true as const,
+    ...(await studySnapshot({ setId: person?.setId ?? undefined })),
+  };
+}
+
+export async function unburySet(setId: string) {
+  const db = getDb();
+  const setCards = await db
+    .select({ id: cards.id })
+    .from(cards)
+    .innerJoin(people, eq(people.id, cards.personId))
+    .where(eq(people.setId, setId));
+  const ids = setCards.map((card) => card.id);
+  if (ids.length) {
+    await db.update(cards).set({ buriedUntil: null }).where(inArray(cards.id, ids));
+  }
+  refreshStudy();
+  return { ok: true as const, ...(await studySnapshot({ setId })) };
 }

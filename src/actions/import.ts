@@ -3,12 +3,13 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { cards, people, sources } from "@/db/schema";
+import { cards, people, sets, sources } from "@/db/schema";
 import { requireEditor } from "@/lib/auth";
 import type { ExtractedPerson } from "@/lib/firecrawl";
-import { emptyCardRow } from "@/lib/fsrs";
+import { cardInsertValues } from "@/lib/fsrs";
 import { normalizeName } from "@/lib/names";
 import { storePhotoFromUrl } from "@/lib/photos";
+import { uniqueSlug } from "@/lib/sets";
 
 export async function confirmImport(input: {
   url: string;
@@ -22,13 +23,23 @@ export async function confirmImport(input: {
 
   const db = getDb();
   const now = new Date();
+  const title = input.title.trim() || new URL(input.url).hostname;
+  const [set] = await db
+    .insert(sets)
+    .values({
+      slug: await uniqueSlug(title),
+      name: title,
+      description: `Imported from ${input.url}`,
+    })
+    .returning();
+
   const [source] = await db
     .insert(sources)
-    .values({ url: input.url, title: input.title })
+    .values({ setId: set.id, url: input.url, title })
     .returning();
 
   const existing = await db.select().from(people);
-  const existingNames = new Set(existing.map((p) => p.normalizedName));
+  const existingNames = new Set(existing.map((person) => person.normalizedName));
 
   let created = 0;
   let skipped = 0;
@@ -44,6 +55,7 @@ export async function confirmImport(input: {
     const [row] = await db
       .insert(people)
       .values({
+        setId: set.id,
         sourceId: source.id,
         name: person.name.trim(),
         normalizedName,
@@ -52,9 +64,8 @@ export async function confirmImport(input: {
       })
       .returning();
 
-    let photoUrl: string | null = null;
     if (person.photoUrl) {
-      photoUrl = await storePhotoFromUrl(person.photoUrl, row.id);
+      const photoUrl = await storePhotoFromUrl(person.photoUrl, row.id);
       if (photoUrl) {
         await db
           .update(people)
@@ -63,15 +74,13 @@ export async function confirmImport(input: {
       }
     }
 
-    await db.insert(cards).values({
-      personId: row.id,
-      ...emptyCardRow(now),
-    });
+    await db.insert(cards).values(cardInsertValues(row.id, now));
     created += 1;
   }
 
   revalidatePath("/");
   revalidatePath("/people");
   revalidatePath("/study");
-  return { ok: true as const, created, skipped };
+  revalidatePath("/sets");
+  return { ok: true as const, created, skipped, slug: set.slug };
 }

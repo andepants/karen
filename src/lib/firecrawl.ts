@@ -1,3 +1,5 @@
+import { publicHttpUrl } from "./urls";
+
 export type ExtractedPerson = {
   name: string;
   description: string;
@@ -16,6 +18,8 @@ const PEOPLE_SCHEMA = {
         properties: {
           name: { type: "string" },
           description: { type: "string" },
+          role: { type: "string" },
+          bio: { type: "string" },
           photoUrl: { type: "string" },
           profileUrl: { type: "string" },
         },
@@ -33,6 +37,7 @@ type ScrapeData = {
       name?: string;
       description?: string;
       role?: string;
+      bio?: string;
       photoUrl?: string;
       profileUrl?: string;
     }>;
@@ -62,7 +67,7 @@ async function firecrawlScrape(url: string): Promise<ScrapeData> {
         {
           type: "json",
           prompt:
-            "Extract every person, team member, staff, faculty, or employee shown on this page. For each person include their full name, a short description (role, title, bio, or department), the URL of their portrait photo, and a profile/bio page URL if present. Skip logos, icons, and decorative images.",
+            "Extract every person, provider, doctor, clinician, team member, or staff shown on this page. For each person include their full name with credentials, their role or specialty, their complete biography text (every paragraph about them), the URL of their portrait photo, and a profile/bio page URL if present. Do not summarize the bio. Skip logos, icons, decorative images, and patients in testimonials.",
           schema: PEOPLE_SCHEMA,
         },
         "images",
@@ -88,11 +93,13 @@ async function firecrawlScrape(url: string): Promise<ScrapeData> {
 }
 
 function sameOrigin(base: string, href: string) {
-  try {
-    return new URL(href, base).origin === new URL(base).origin;
-  } catch {
-    return false;
-  }
+  const left = publicHttpUrl(href, base);
+  const right = publicHttpUrl(base);
+  return Boolean(left && right && left.origin === right.origin);
+}
+
+function resolvePageUrl(href: string, base: string) {
+  return publicHttpUrl(href, base)?.toString() ?? null;
 }
 
 function toPerson(
@@ -101,23 +108,18 @@ function toPerson(
 ): ExtractedPerson | null {
   const name = raw.name?.trim();
   if (!name) return null;
-  const description = (raw.description || raw.role || "").trim();
-  let photoUrl = raw.photoUrl?.trim() || null;
-  if (photoUrl) {
-    try {
-      photoUrl = new URL(photoUrl, pageUrl).toString();
-    } catch {
-      photoUrl = null;
-    }
-  }
-  let profileUrl = raw.profileUrl?.trim() || null;
-  if (profileUrl) {
-    try {
-      profileUrl = new URL(profileUrl, pageUrl).toString();
-    } catch {
-      profileUrl = null;
-    }
-  }
+  const role = (raw.role || "").trim();
+  const bio = (raw.bio || "").trim();
+  const description = [role || raw.description, bio]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim() || (raw.description || "").trim();
+  const photoUrl = raw.photoUrl?.trim()
+    ? resolvePageUrl(raw.photoUrl.trim(), pageUrl)
+    : null;
+  const profileUrl = raw.profileUrl?.trim()
+    ? resolvePageUrl(raw.profileUrl.trim(), pageUrl)
+    : null;
   return { name, description, photoUrl, profileUrl };
 }
 
@@ -125,60 +127,61 @@ export async function extractPeopleFromUrl(
   pageUrl: string,
   options: { followProfiles?: boolean } = {},
 ) {
-  const parsed = new URL(pageUrl);
-  if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error("URL must start with http or https");
+  const parsed = publicHttpUrl(pageUrl);
+  if (!parsed) {
+    throw new Error("URL must be a public http or https address");
   }
 
   const first = await firecrawlScrape(parsed.toString());
-  const people: ExtractedPerson[] = [];
-  const seen = new Set<string>();
+  const byName = new Map<string, ExtractedPerson>();
+
+  function addPerson(person: ExtractedPerson, fallbackProfile?: string) {
+    const key = person.name.toLowerCase();
+    const next = {
+      ...person,
+      profileUrl: person.profileUrl || fallbackProfile || null,
+    };
+    const existing = byName.get(key);
+    if (!existing) {
+      byName.set(key, next);
+      return;
+    }
+    if (next.description.length > existing.description.length) {
+      existing.description = next.description;
+    }
+    existing.photoUrl ||= next.photoUrl;
+    existing.profileUrl ||= next.profileUrl;
+  }
 
   for (const raw of first.json?.people ?? []) {
     const person = toPerson(raw, parsed.toString());
-    if (!person) continue;
-    const key = person.name.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    people.push(person);
+    if (person) addPerson(person);
   }
 
   const title = first.json?.pageTitle || first.metadata?.title || parsed.hostname;
+  const shouldFollow =
+    options.followProfiles ||
+    /provider-bio|our-providers|\/team|\/staff|\/doctors/i.test(parsed.pathname);
 
-  if (options.followProfiles) {
+  if (shouldFollow) {
     const candidates = [
-      ...people.map((p) => p.profileUrl).filter(Boolean),
+      ...[...byName.values()].map((person) => person.profileUrl),
       ...(first.links ?? []),
     ]
       .filter((href): href is string => Boolean(href))
       .filter((href) => sameOrigin(parsed.toString(), href))
       .filter((href) => href !== parsed.toString())
-      .slice(0, 30);
+      .filter((href) =>
+        /provider-bio|our-providers|\/team\/|\/staff\/|\/doctors\//i.test(href),
+      )
+      .slice(0, 45);
 
-    const unique = [...new Set(candidates)];
-    for (const href of unique) {
+    for (const href of [...new Set(candidates)]) {
       try {
         const page = await firecrawlScrape(href);
         for (const raw of page.json?.people ?? []) {
           const person = toPerson(raw, href);
-          if (!person) continue;
-          const key = person.name.toLowerCase();
-          if (seen.has(key)) {
-            const existing = people.find(
-              (p) => p.name.toLowerCase() === key,
-            );
-            if (existing) {
-              existing.description ||= person.description;
-              existing.photoUrl ||= person.photoUrl;
-              existing.profileUrl ||= person.profileUrl || href;
-            }
-            continue;
-          }
-          seen.add(key);
-          people.push({
-            ...person,
-            profileUrl: person.profileUrl || href,
-          });
+          if (person) addPerson(person, href);
         }
       } catch {
         // Skip a failed profile page and keep the rest of the import.
@@ -186,5 +189,5 @@ export async function extractPeopleFromUrl(
     }
   }
 
-  return { title, people };
+  return { title, people: [...byName.values()] };
 }
