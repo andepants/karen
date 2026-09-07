@@ -12,6 +12,7 @@ export async function unlockEditor(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/people");
   revalidatePath("/study");
+  revalidatePath("/sets");
   return { ok: true as const };
 }
 
@@ -20,4 +21,5 @@ export async function lockEditor() {
   revalidatePath("/");
   revalidatePath("/people");
   revalidatePath("/study");
+  revalidatePath("/sets");
 }

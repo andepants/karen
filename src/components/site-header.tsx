@@ -20,6 +20,9 @@ export function SiteHeader({
       </Link>
       <nav className="flex items-center gap-1 sm:gap-2">
         <Button variant="ghost" asChild>
+          <Link href="/sets">Sets</Link>
+        </Button>
+        <Button variant="ghost" asChild>
           <Link href="/people">People</Link>
         </Button>
         <Button variant="ghost" asChild>

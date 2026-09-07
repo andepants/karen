@@ -18,39 +18,55 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { people as peopleTable } from "@/db/schema";
+import type { people as peopleTable, sets as setsTable } from "@/db/schema";
 
 type Person = typeof peopleTable.$inferSelect;
+type SetRow = typeof setsTable.$inferSelect;
 
 export function PeopleGrid({
   people,
+  sets,
   isEditor,
 }: {
   people: Person[];
+  sets: SetRow[];
   isEditor: boolean;
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {isEditor ? <AddPersonCard /> : null}
+      {isEditor ? <AddPersonCard sets={sets} /> : null}
       {people.map((person) => (
-        <PersonCard key={person.id} person={person} isEditor={isEditor} />
+        <PersonCard
+          key={person.id}
+          person={person}
+          sets={sets}
+          isEditor={isEditor}
+        />
       ))}
     </div>
   );
 }
 
-function AddPersonCard() {
+function AddPersonCard({ sets }: { sets: SetRow[] }) {
   return (
     <Card className="border-dashed bg-card/60">
       <CardContent className="flex h-full min-h-48 flex-col justify-center p-5">
         <p className="font-heading text-xl">Add someone</p>
-        <PersonForm />
+        <PersonForm sets={sets} />
       </CardContent>
     </Card>
   );
 }
 
-function PersonCard({ person, isEditor }: { person: Person; isEditor: boolean }) {
+function PersonCard({
+  person,
+  sets,
+  isEditor,
+}: {
+  person: Person;
+  sets: SetRow[];
+  isEditor: boolean;
+}) {
   return (
     <Card className={person.archived ? "opacity-60" : "bg-card/90"}>
       <CardContent className="space-y-3 p-5">
@@ -84,7 +100,7 @@ function PersonCard({ person, isEditor }: { person: Person; isEditor: boolean })
                 <DialogHeader>
                   <DialogTitle>Edit {person.name}</DialogTitle>
                 </DialogHeader>
-                <PersonForm person={person} />
+                <PersonForm person={person} sets={sets} />
               </DialogContent>
             </Dialog>
             <Button
@@ -101,7 +117,7 @@ function PersonCard({ person, isEditor }: { person: Person; isEditor: boolean })
   );
 }
 
-function PersonForm({ person }: { person?: Person }) {
+function PersonForm({ person, sets }: { person?: Person; sets: SetRow[] }) {
   const [error, setError] = useState<string | null>(null);
   const action = person ? updatePerson : createPerson;
 
@@ -114,6 +130,23 @@ function PersonForm({ person }: { person?: Person }) {
       }}
     >
       {person ? <input type="hidden" name="id" value={person.id} /> : null}
+      {sets.length ? (
+        <div className="space-y-1">
+          <Label htmlFor={`set-${person?.id ?? "new"}`}>Set</Label>
+          <select
+            id={`set-${person?.id ?? "new"}`}
+            name="setId"
+            defaultValue={person?.setId ?? sets[0]?.id}
+            className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm"
+          >
+            {sets.map((set) => (
+              <option key={set.id} value={set.id}>
+                {set.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <div className="space-y-1">
         <Label htmlFor={`name-${person?.id ?? "new"}`}>Name</Label>
         <Input

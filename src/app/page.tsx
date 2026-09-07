@@ -1,9 +1,14 @@
+import Link from "next/link";
 import { LilyGarden } from "@/components/lily-garden";
 import { ImportForm, UnlockForm } from "@/components/import-form";
+import { Button } from "@/components/ui/button";
 import { isEditor } from "@/lib/auth";
+import { GARDEN_TEST_SLUG } from "@/lib/seed-data";
+import { getSetBySlug } from "@/lib/sets";
 
 export default async function HomePage() {
   const editor = await isEditor();
+  const garden = await getSetBySlug(GARDEN_TEST_SLUG).catch(() => null);
 
   return (
     <main className="relative overflow-hidden px-6 pb-40 pt-8 md:pt-16">
@@ -20,6 +25,16 @@ export default async function HomePage() {
           then surfaces the faces you keep missing — the same spaced
           repetition family Anki uses.
         </p>
+        {garden ? (
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button size="lg" className="rounded-full px-6" asChild>
+              <Link href={`/study/${garden.slug}`}>Study Garden Test</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/sets">All sets</Link>
+            </Button>
+          </div>
+        ) : null}
         <div className="mt-10 space-y-8 rounded-[2rem] bg-card/70 p-6 shadow-sm ring-1 ring-border backdrop-blur-sm md:p-8">
           {!editor ? <UnlockForm /> : null}
           <ImportForm isEditor={editor} />

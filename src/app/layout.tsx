@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Cormorant_Garamond, Figtree } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { isEditor } from "@/lib/auth";
@@ -25,7 +26,9 @@ export const dynamic = "force-dynamic";
 
 export default async function RootLayout({
   children,
-}: LayoutProps<"/">) {
+}: {
+  children: ReactNode;
+}) {
   let editor = false;
   let due = 0;
   try {

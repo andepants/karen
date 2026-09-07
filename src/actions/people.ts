@@ -5,14 +5,22 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
 import { cards, people } from "@/db/schema";
 import { requireEditor } from "@/lib/auth";
-import { emptyCardRow } from "@/lib/fsrs";
+import { cardInsertValues } from "@/lib/fsrs";
 import { normalizeName } from "@/lib/names";
 import { storePhotoFromFile } from "@/lib/photos";
+
+function refreshPeople() {
+  revalidatePath("/people");
+  revalidatePath("/study");
+  revalidatePath("/sets");
+  revalidatePath("/");
+}
 
 export async function createPerson(formData: FormData) {
   await requireEditor();
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const setId = String(formData.get("setId") ?? "").trim() || null;
   const photo = formData.get("photo");
   if (!name) {
     return { error: "Name is required." };
@@ -23,6 +31,7 @@ export async function createPerson(formData: FormData) {
   const [person] = await db
     .insert(people)
     .values({
+      setId,
       name,
       normalizedName: normalizeName(name),
       description,
@@ -34,14 +43,8 @@ export async function createPerson(formData: FormData) {
     await db.update(people).set({ photoUrl, updatedAt: now }).where(eq(people.id, person.id));
   }
 
-  await db.insert(cards).values({
-    personId: person.id,
-    ...emptyCardRow(now),
-  });
-
-  revalidatePath("/people");
-  revalidatePath("/study");
-  revalidatePath("/");
+  await db.insert(cards).values(cardInsertValues(person.id, now));
+  refreshPeople();
   return { ok: true as const };
 }
 
@@ -50,6 +53,7 @@ export async function updatePerson(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const setId = String(formData.get("setId") ?? "").trim() || null;
   const photo = formData.get("photo");
   if (!id || !name) {
     return { error: "Name is required." };
@@ -68,13 +72,13 @@ export async function updatePerson(formData: FormData) {
       name,
       normalizedName: normalizeName(name),
       description,
+      setId,
       updatedAt: now,
       ...(photoUrl ? { photoUrl } : {}),
     })
     .where(eq(people.id, id));
 
-  revalidatePath("/people");
-  revalidatePath("/study");
+  refreshPeople();
   return { ok: true as const };
 }
 
@@ -85,7 +89,5 @@ export async function setPersonArchived(id: string, archived: boolean) {
     .update(people)
     .set({ archived, updatedAt: new Date() })
     .where(eq(people.id, id));
-  revalidatePath("/people");
-  revalidatePath("/study");
-  revalidatePath("/");
+  refreshPeople();
 }

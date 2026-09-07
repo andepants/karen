@@ -66,7 +66,9 @@ export function ImportForm({ isEditor }: { isEditor: boolean }) {
       setError(result.error);
       return;
     }
-    setSaved(`Added ${result.created} people${result.skipped ? `, skipped ${result.skipped} duplicates` : ""}.`);
+    setSaved(
+      `Added ${result.created} people${result.skipped ? `, skipped ${result.skipped} duplicates` : ""}${result.slug ? ` into /study/${result.slug}` : ""}.`,
+    );
     setPeople([]);
   }
 
