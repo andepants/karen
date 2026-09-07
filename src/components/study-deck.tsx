@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { motion } from "motion/react";
 import {
   buryCard,
   rateCard,
@@ -202,10 +201,8 @@ export function StudyDeck({
         onClick={() => setFlipped((value) => !value)}
         className="w-full text-left"
       >
-        <motion.article
+        <article
           key={`${item.card.id}-${flipped ? "back" : "front"}`}
-          initial={{ rotateY: 12, opacity: 0 }}
-          animate={{ rotateY: 0, opacity: 1 }}
           className="overflow-hidden rounded-[2rem] bg-card shadow-sm ring-1 ring-border"
         >
           {isNameCard && !flipped ? (
@@ -241,7 +238,7 @@ export function StudyDeck({
               </p>
             )}
           </div>
-        </motion.article>
+        </article>
       </button>
 
       {flipped ? (
