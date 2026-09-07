@@ -1,7 +1,7 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { cards, people, reviewLogs, sets } from "@/db/schema";
-import { cardInsertValues } from "./fsrs";
+import { State, cardInsertValues } from "./fsrs";
 import { normalizeName } from "./names";
 import { RETIRED_SET_SLUGS, seedSets } from "./seed-data";
 
@@ -90,6 +90,8 @@ export async function seedTestSets() {
           name: seed.name,
           description: seed.description,
           newCardsPerDay: seed.newCardsPerDay ?? 20,
+          buryNewSiblings: seed.buryNewSiblings ?? false,
+          buryReviewSiblings: seed.buryReviewSiblings ?? false,
         })
         .returning();
     } else {
@@ -99,12 +101,15 @@ export async function seedTestSets() {
           name: seed.name,
           description: seed.description,
           newCardsPerDay: seed.newCardsPerDay ?? set.newCardsPerDay,
+          buryNewSiblings: seed.buryNewSiblings ?? set.buryNewSiblings,
+          buryReviewSiblings: seed.buryReviewSiblings ?? set.buryReviewSiblings,
         })
         .where(eq(sets.id, set.id));
     }
 
     let peopleCount = 0;
     let cardCount = 0;
+    const personIds: string[] = [];
 
     for (const person of seed.people) {
       const normalizedName = normalizeName(person.name);
@@ -147,6 +152,7 @@ export async function seedTestSets() {
 
       if (!personId) continue;
       peopleCount += 1;
+      personIds.push(personId);
 
       const existingCards = await db
         .select()
@@ -160,6 +166,13 @@ export async function seedTestSets() {
         await db.insert(cards).values(missing);
       }
       cardCount += existingCards.length + missing.length;
+    }
+
+    if (personIds.length && seed.buryNewSiblings === false) {
+      await db
+        .update(cards)
+        .set({ buriedUntil: null })
+        .where(and(inArray(cards.personId, personIds), eq(cards.state, State.New)));
     }
 
     created.push({

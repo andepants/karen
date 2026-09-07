@@ -10,6 +10,8 @@ export type SeedSet = {
   name: string;
   description: string;
   newCardsPerDay?: number;
+  buryNewSiblings?: boolean;
+  buryReviewSiblings?: boolean;
   people: SeedPerson[];
 };
 
@@ -24,6 +26,8 @@ export const seedSets: SeedSet[] = [
     name: "Austin Area OBGYN",
     description: "40 providers. Photo and name cards.",
     newCardsPerDay: 80,
+    buryNewSiblings: false,
+    buryReviewSiblings: false,
     people: [
       {
         name: "Mark Akin, MD, FACOG",
