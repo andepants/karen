@@ -51,6 +51,7 @@ export function StudyDeck({
   const [intervals, setIntervals] = useState(initial.intervals);
   const [canUndo, setCanUndo] = useState(initial.canUndo);
   const [flipped, setFlipped] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [leechNote, setLeechNote] = useState(false);
@@ -63,6 +64,8 @@ export function StudyDeck({
   useEffect(() => {
     startedAt.current = Date.now();
     setElapsed(0);
+    setFlipped(false);
+    setRevealed(false);
     const timer = window.setInterval(() => {
       setElapsed(Math.floor((Date.now() - startedAt.current) / 1000));
     }, 250);
@@ -81,6 +84,7 @@ export function StudyDeck({
       if ("leech" in result) setLeechNote(Boolean(result.leech));
       else setLeechNote(false);
       setFlipped(false);
+      setRevealed(false);
       applySnapshot(result, setItem, setLeft, setCounts, setIntervals, setCanUndo);
     });
   }
@@ -177,11 +181,15 @@ export function StudyDeck({
           aria-pressed={flipped}
           aria-label={flipped ? "Hide answer" : "Show answer"}
           className="flashcard-trigger"
-          onClick={() => setFlipped((value) => !value)}
+          onClick={() => {
+            setFlipped((value) => !value);
+            setRevealed(true);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
               setFlipped((value) => !value);
+              setRevealed(true);
             }
           }}
         >
@@ -222,7 +230,7 @@ export function StudyDeck({
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto grid w-full max-w-lg grid-cols-2 gap-2 sm:grid-cols-4">
-          {flipped ? (
+          {revealed ? (
             ratings.map((rating) => (
               <Button
                 key={rating.value}
@@ -241,7 +249,10 @@ export function StudyDeck({
             <Button
               size="lg"
               className="col-span-2 rounded-full sm:col-span-4"
-              onClick={() => setFlipped(true)}
+              onClick={() => {
+                setFlipped(true);
+                setRevealed(true);
+              }}
             >
               Show answer
             </Button>
