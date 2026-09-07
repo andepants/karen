@@ -3,7 +3,10 @@ import type { ReactNode } from "react";
 import { Cormorant_Garamond, Figtree } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { isEditor } from "@/lib/auth";
+import { ensureDefaultSet } from "@/lib/ensure-test-set";
 import { dueCount } from "@/lib/queue";
+import { DEFAULT_SET_SLUG } from "@/lib/seed-data";
+import { getSetBySlug } from "@/lib/sets";
 import "./globals.css";
 
 const serif = Cormorant_Garamond({
@@ -33,7 +36,10 @@ export default async function RootLayout({
   let due = 0;
   try {
     editor = await isEditor();
-    due = await dueCount();
+    const deck =
+      (await getSetBySlug(DEFAULT_SET_SLUG).catch(() => null)) ??
+      (await ensureDefaultSet());
+    due = await dueCount({ setId: deck?.id });
   } catch {
     editor = await isEditor().catch(() => false);
   }

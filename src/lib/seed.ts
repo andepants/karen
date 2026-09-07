@@ -34,9 +34,43 @@ async function removeRetiredSets() {
   await db.delete(sets).where(inArray(sets.id, setIds));
 }
 
+async function removeOrphanPeople() {
+  const db = getDb();
+  const allSets = await db.select({ id: sets.id, slug: sets.slug }).from(sets);
+  const setIds = new Set(allSets.map((set) => set.id));
+  const allowedBySlug = new Map(
+    seedSets.map((seed) => [
+      seed.slug,
+      new Set(seed.people.map((person) => normalizeName(person.name))),
+    ]),
+  );
+  const slugById = new Map(allSets.map((set) => [set.id, set.slug]));
+  const roster = await db.select({ id: people.id, setId: people.setId, normalizedName: people.normalizedName }).from(people);
+  const extraIds = roster
+    .filter((person) => {
+      if (!person.setId || !setIds.has(person.setId)) return true;
+      const allowed = allowedBySlug.get(slugById.get(person.setId) ?? "");
+      return allowed ? !allowed.has(person.normalizedName) : false;
+    })
+    .map((person) => person.id);
+  if (!extraIds.length) return;
+
+  const cardRows = await db
+    .select({ id: cards.id })
+    .from(cards)
+    .where(inArray(cards.personId, extraIds));
+  const cardIds = cardRows.map((row) => row.id);
+  if (cardIds.length) {
+    await db.delete(reviewLogs).where(inArray(reviewLogs.cardId, cardIds));
+    await db.delete(cards).where(inArray(cards.id, cardIds));
+  }
+  await db.delete(people).where(inArray(people.id, extraIds));
+}
+
 export async function seedTestSets() {
   const db = getDb();
   await removeRetiredSets();
+  await removeOrphanPeople();
   const now = new Date();
   const created: { slug: string; name: string; people: number; cards: number }[] =
     [];
